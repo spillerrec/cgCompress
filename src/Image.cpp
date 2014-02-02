@@ -61,8 +61,44 @@ Image Image::remove_transparent() const{
 }
 
 Image Image::auto_crop() const{
+	int right=0, left=0;
+	int top=0, bottom=0;
 	
-	return *this;
+	//Decrease top
+	for( ; top<img.height(); top++ ){
+		const QRgb* row = (const QRgb*)img.constScanLine( top );
+		for( int ix=0; ix<img.width(); ix++ )
+			if( qAlpha( row[ix] ) != 0 )
+				goto TOP_BREAK;
+	}
+TOP_BREAK:
+	
+	//Decrease bottom
+	for( ; bottom<img.height(); bottom++ ){
+		const QRgb* row = (const QRgb*)img.constScanLine( img.height()-1-bottom );
+		for( int ix=0; ix<img.width(); ix++ )
+			if( qAlpha( row[ix] ) != 0 )
+				goto BOTTOM_BREAK;
+	}
+BOTTOM_BREAK:
+	
+	//Decrease left
+	for( ; left<img.width(); left++ )
+		for( int iy=0; iy<img.height(); iy++ )
+			if( qAlpha( img.pixel(left,iy) ) != 0 )
+				goto LEFT_BREAK;
+LEFT_BREAK:
+	
+	//Decrease right
+	for( ; right<img.width(); right++ )
+		for( int iy=0; iy<img.height(); iy++ )
+			if( qAlpha( img.pixel(img.width()-1-right,iy) ) != 0 )
+				goto RIGHT_BREAK;
+RIGHT_BREAK:
+	
+	QImage cropped = img.copy( left, top, img.width()-left-right, img.height()-top-bottom );
+	
+	return Image( pos + QPoint(left,top), cropped );
 }
 
 
