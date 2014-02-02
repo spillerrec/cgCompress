@@ -31,10 +31,20 @@ class Image {
 		
 		bool save( QString path ){ return img.save( path ); }
 		
+		Image sub_image( int x, int y, int width, int height ) const{
+			return Image( pos+QPoint(x,y), img.copy( x,y, width,height ) );
+		}
+		
+		QList<Image> segment() const;
+		
 		unsigned compressed_size() const;
 		Image difference( Image img ) const;
 		Image remove_transparent() const;
 		Image auto_crop() const;
+		
+		bool operator==( const Image& other ) const{
+			return pos == other.pos && img == other.img;
+		}
 };
 
 #endif

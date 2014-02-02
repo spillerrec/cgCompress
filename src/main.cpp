@@ -21,6 +21,17 @@
 
 #include "Image.hpp"
 
+QList<Image> remove_dupes( QList<Image> images ){
+	QList<Image> list;
+	
+	for( auto image : images ){
+		if( !list.contains( image ) )
+			list.append( image );
+	}
+	
+	return list;
+}
+
 int main( int argc, char* argv[] ){
 	QCoreApplication app( argc, argv );
 	
@@ -31,8 +42,16 @@ int main( int argc, char* argv[] ){
 	for( auto arg : args )
 		images.append( Image( arg ) );
 	
-	for( int i=1; i<images.count(); i++ )
-		images[i].difference( images[i-1] ).auto_crop().remove_transparent().save( QString( "%1.png" ).arg( i ) );
+	QList<Image> sub_images;
+	for( int i=1; i<images.count(); i++ ){
+		Image diff = images[i].difference( images[i-1] );
+		sub_images.append( diff.segment() );
+	}
+	
+	sub_images = remove_dupes( sub_images );
+	
+	for( int i=0; i<sub_images.count(); i++ )
+		sub_images[i].auto_crop().remove_transparent().save( QString( "%1.png" ).arg( i ) );
 	
 	return 0;
 }

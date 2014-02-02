@@ -32,6 +32,38 @@ unsigned Image::compressed_size() const{
 	return count;
 }
 
+bool content_in_vertical_line( QImage img, int x ){
+	for( int iy=0; iy<img.height(); iy++ )
+		if( qAlpha( img.pixel(x,iy) ) != 0 )
+			return true;
+	return false;
+}
+
+QList<Image> Image::segment() const{
+	QList<Image> images;
+	
+	//Check vertical lines
+	bool content = content_in_vertical_line( img, 0 );
+	int first_line = 0;
+	for( int ix=1; ix<img.width(); ix++ ){
+		bool cur_content = content_in_vertical_line( img, ix );
+		if( content == cur_content )
+			continue;
+		
+		if( cur_content == true )
+			first_line = ix;
+		else
+			images.append( sub_image( first_line,0, ix-first_line, img.height() ) );
+		
+		content = cur_content;
+	}
+	
+	//TODO: check horizontal lines
+	//TODO: make recursive?
+	
+	return images;
+}
+
 Image Image::difference( Image input ) const{
 	//TODO: images must be the same size and at same point
 	
@@ -104,9 +136,7 @@ LEFT_BREAK:
 				goto RIGHT_BREAK;
 RIGHT_BREAK:
 	
-	QImage cropped = img.copy( left, top, img.width()-left-right, img.height()-top-bottom );
-	
-	return Image( pos + QPoint(left,top), cropped );
+	return sub_image( left,top, img.width()-left-right, img.height()-top-bottom );
 }
 
 
