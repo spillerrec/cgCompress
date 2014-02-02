@@ -32,7 +32,7 @@ int main( int argc, char* argv[] ){
 		images.append( Image( arg ) );
 	
 	for( int i=1; i<images.count(); i++ )
-		images[i].difference( images[i-1] ).auto_crop().save( QString( "%1.png" ).arg( i ) );
+		images[i].difference( images[i-1] ).auto_crop().remove_transparent().save( QString( "%1.png" ).arg( i ) );
 	
 	return 0;
 }

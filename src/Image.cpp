@@ -56,8 +56,16 @@ Image Image::difference( Image input ) const{
 }
 
 Image Image::remove_transparent() const{
+	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
 	
-	return *this;
+	for( int iy=0; iy<output.height(); iy++ ){
+		QRgb* out = (QRgb*)output.scanLine( iy );
+		for( int ix=0; ix<output.width(); ix++ )
+			if( qAlpha( out[ix] ) == 0 )
+				out[ix] = qRgba( 0,0,0,0 );
+	}
+			
+	return Image( pos, output );
 }
 
 Image Image::auto_crop() const{
