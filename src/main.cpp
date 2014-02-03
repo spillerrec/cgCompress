@@ -19,7 +19,10 @@
 #include <QStringList>
 #include <QDebug>
 
+#include <iostream>
+
 #include "Image.hpp"
+#include "Frame.hpp"
 
 QList<Image> remove_dupes( QList<Image> images ){
 	QList<Image> list;
@@ -43,9 +46,23 @@ int main( int argc, char* argv[] ){
 		images.append( Image( arg ) );
 	
 	QList<Image> sub_images;
+	sub_images.append( images );
 	for( int i=1; i<images.count(); i++ ){
-		Image diff = images[i].difference( images[i-1] );
+		Image diff = images[i-1].difference( images[i] );
 		sub_images.append( diff.segment() );
+	}
+	
+	QList<Frame> frames = Frame::generate_frames( sub_images, images[images.size()-1], images.size() );
+	qDebug( "Frames amout: %d", frames.count() );
+	
+	for( auto frame : frames ){
+		static int i=0;
+		std::cout << "Reconstruct " << i << ":\n";
+		for( auto layer : frames[i].layers )
+			std::cout << "\t" << layer;
+		std::cout << "\n";
+		i++;
+		//frame.reconstruct().save( QString( "%1.png" ).arg( i++ ) );
 	}
 	
 	/* Test combining
