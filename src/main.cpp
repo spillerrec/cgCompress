@@ -48,7 +48,12 @@ int main( int argc, char* argv[] ){
 		sub_images.append( diff.segment() );
 	}
 	
+	/* Test combining
+	for( int i=1; i<sub_images.count(); i++ )
+		sub_images[i-1].auto_crop().combine( sub_images[i].auto_crop() ).save( QString( "com_%1.png" ).arg( i ) );
+	
 	sub_images = remove_dupes( sub_images );
+	//*/
 	
 	for( int i=0; i<sub_images.count(); i++ )
 		sub_images[i].auto_crop().remove_transparent().save( QString( "%1.png" ).arg( i ) );

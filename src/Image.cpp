@@ -18,6 +18,9 @@
 #include "Image.hpp"
 
 #include <cmath>
+
+#include <QPainter>
+
 using namespace std;
 
 unsigned Image::compressed_size() const{
@@ -57,11 +60,29 @@ QList<Image> Image::segment() const{
 		
 		content = cur_content;
 	}
+	//TODO: grab the last image if content touches the right edge
 	
 	//TODO: check horizontal lines
 	//TODO: make recursive?
 	
+	//TODO: make sure this doesn't bloat the file size with many small images.
+	//   A cost function which models the overhead could be used.
+	
 	return images;
+}
+
+Image Image::combine( Image on_top ) const{
+	QPoint tl{ min( pos.x(), on_top.pos.x() ), min( pos.y(), on_top.pos.y() ) };
+	int width = max( pos.x()+img.width(), on_top.pos.x()+on_top.img.width() ) - tl.x();
+	int height = max( pos.y()+img.height(), on_top.pos.y()+on_top.img.height() ) - tl.y();
+	
+	QImage output( width, height, QImage::Format_ARGB32 );
+	output.fill( 0 );
+	QPainter painter( &output );
+	painter.drawImage( pos-tl, img );
+	painter.drawImage( on_top.pos-tl, on_top.img );
+	
+	return Image( tl, output );
 }
 
 Image Image::difference( Image input ) const{

@@ -37,6 +37,8 @@ class Image {
 		
 		QList<Image> segment() const;
 		
+		Image combine( Image on_top ) const;
+		
 		unsigned compressed_size() const;
 		Image difference( Image img ) const;
 		Image remove_transparent() const;
