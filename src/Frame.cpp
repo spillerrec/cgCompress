@@ -127,11 +127,23 @@ QList<Frame> Frame::generate_frames( QList<Image>& primitives, Image original, i
 	if( original == reconstructed )
 		results.append( current );
 	else{
+		QList<Image> areas = reconstructed.difference( original ).segment();
 		for( int i=start; i<primitives.size(); i++ ){
 			if( !current.layers.contains( i ) ){
+				//Skip if this primitive does not affect wrong areas
+				bool relevant = false;
+				for( auto area : areas )
+					if( area.overlaps( primitives[i] ) ){
+						relevant = true;
+						break;
+					}
+				if( !relevant )
+					continue;
+				
+				//TODO: skip if it doesn't affect it positively?
+				
 				Frame add( current );
 				add.layers.append( i );
-				//TODO: bail if this doesn't affect a used area
 				results.append( generate_frames( primitives, original, start, add, reconstructed.combine( primitives[i] ) ) );
 			}
 		}

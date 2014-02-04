@@ -33,6 +33,10 @@ class Image {
 		bool save( QString path ){ return img.save( path ); }
 		QByteArray to_byte_array( const char* format ) const;
 		
+		bool overlaps( Image other ) const{
+			return QRect( pos, img.size() ).intersects( QRect( other.pos, other.img.size() ) );
+		}
+		
 		Image sub_image( int x, int y, int width, int height ) const{
 			return Image( pos+QPoint(x,y), img.copy( x,y, width,height ) );
 		}
