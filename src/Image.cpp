@@ -20,19 +20,20 @@
 #include <cmath>
 
 #include <QPainter>
+#include <QBuffer>
 
 using namespace std;
 
-unsigned Image::compressed_size() const{
-	unsigned count = 0;
-	for( int iy=0; iy<img.height(); iy++ ){
-		const QRgb* row = (const QRgb*)img.constScanLine( iy );
-		for( int ix=0; ix<img.width(); ix++ ){
-			if( qAlpha(row[ix]) != 0 )
-				count++;
-		}
-	}
-	return count;
+int Image::compressed_size( const char* format ) const{
+	return to_byte_array( format ).size();
+}
+
+QByteArray Image::to_byte_array( const char* format ) const{
+	QByteArray data;
+	QBuffer buffer( &data );
+	buffer.open( QIODevice::WriteOnly );
+	img.save( &buffer, format );
+	return data;
 }
 
 bool content_in_vertical_line( QImage img, int x ){

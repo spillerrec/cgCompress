@@ -19,6 +19,7 @@
 #define IMAGE_HPP
 
 #include <QImage>
+#include <QByteArray>
 
 class Image {
 	private:
@@ -30,6 +31,7 @@ class Image {
 		Image( QPoint pos, QImage img ) : pos(pos), img(img) { }
 		
 		bool save( QString path ){ return img.save( path ); }
+		QByteArray to_byte_array( const char* format ) const;
 		
 		Image sub_image( int x, int y, int width, int height ) const{
 			return Image( pos+QPoint(x,y), img.copy( x,y, width,height ) );
@@ -39,7 +41,7 @@ class Image {
 		
 		Image combine( Image on_top ) const;
 		
-		unsigned compressed_size() const;
+		int compressed_size( const char* format ) const;
 		Image difference( Image img ) const;
 		Image remove_transparent() const;
 		Image auto_crop() const;

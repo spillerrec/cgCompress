@@ -25,6 +25,8 @@ class MultiImage {
 	private:
 		QList<Image> originals;
 		
+		static QList<Frame> lowest_cost( const QList<Image>& primitives, QList<QList<Frame>> all_frames );
+		
 	public:
 		MultiImage() { }
 		MultiImage( QList<Image> originals ) : originals(originals) { }

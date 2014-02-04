@@ -31,6 +31,11 @@ QList<T> remove_duplicates( QList<T> elements ){
 	return list;
 }
 
+QList<Frame> MultiImage::lowest_cost( const QList<Image>& primitives, QList<QList<Frame>> all_frames ){
+	//TODO:
+	return QList<Frame>();
+}
+
 QList<Frame> MultiImage::optimize() const{
 	if( originals.count() == 0 )
 		return QList<Frame>();
@@ -51,7 +56,7 @@ QList<Frame> MultiImage::optimize() const{
 		sub = sub.auto_crop();
 		
 	for( int i=0; i<sub_images.count(); i++ )
-		sub_images[i].remove_transparent().save( QString( "%1.png" ).arg( i ) );
+		sub_images[i].remove_transparent().save( QString( "%1.webp" ).arg( i ) );
 	
 	//Generate all possible frames
 	QList<QList<Frame>> all_frames;
@@ -66,10 +71,19 @@ QList<Frame> MultiImage::optimize() const{
 			frame.debug();
 	}
 	
-	//TODO: optimize 
-	QList<Frame> best;
-	unsigned size = UINT_MAX;
-		
-	return QList<Frame>();
+	//Optimize sub_images for saving
+	for( auto& sub : sub_images )
+		sub = sub.remove_transparent();
+	
+	//Calculate file sizes
+	QList<unsigned> sizes;
+	for( auto sub : sub_images )
+		sizes.append( sub.compressed_size( "webp" ) );
+	qDebug( "File sizes:" );
+	for( auto size : sizes )
+		qDebug( "\t%d bytes", size );
+	
+	//Optimize
+	return lowest_cost( sub_images, all_frames );
 }
 
