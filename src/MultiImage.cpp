@@ -66,33 +66,67 @@ std::pair<QList<Frame>,int> MultiImage::lowest_cost( const QList<int>& costs, QL
 	}
 }
 
-QList<Frame> MultiImage::optimize() const{
-	if( originals.count() == 0 )
-		return QList<Frame>();
-	
-	//First part is the original images
-	QList<Image> sub_images( originals );
+QList<Image> MultiImage::diff_fast( int& amount ) const{
+	QList<Image> sub_images;
+	sub_images.append( originals.first() );
+	amount = 1;
 	
 	//Find all possible differences
-	for( int i=0; i<originals.count(); i++ )
-		for( int j=i+1; j<originals.count(); j++ ){
+	for( int i=1; i<originals.size(); i++ )
+		sub_images.append( originals[i-1].difference( originals[i] ).segment() );
+	
+	return sub_images;
+}
+
+QList<Image> MultiImage::diff_linear( int& amount ) const{
+	QList<Image> sub_images;
+	sub_images.append( originals.first() );
+	amount = 1;
+	
+	//Find all possible differences
+	for( int i=0; i<originals.size(); i++ )
+		for( int j=i+1; j<originals.size(); j++ )
+			sub_images.append( originals[i].difference( originals[j] ).segment() );
+	
+	return sub_images;
+}
+
+QList<Image> MultiImage::diff_all( int& amount ) const{
+	QList<Image> sub_images( originals );
+	amount = originals.size();
+	
+	//Find all possible differences
+	for( int i=0; i<amount; i++ )
+		for( int j=i+1; j<originals.size(); j++ ){
 			sub_images.append( originals[i].difference( originals[j] ).segment() );
 			sub_images.append( originals[j].difference( originals[i] ).segment() );
 		}
+	
+	return sub_images;
+}
+
+
+QList<Frame> MultiImage::optimize() const{
+	if( originals.size() == 0 )
+		return QList<Frame>();
+	
+	//Differences
+	int amount;
+	QList<Image> sub_images = diff_linear( amount );
 	
 	//Remove duplicates and auto-crop
 	sub_images = remove_duplicates( sub_images );
 	for( auto& sub : sub_images )
 		sub = sub.auto_crop();
 		
-	for( int i=0; i<sub_images.count(); i++ )
+	for( int i=0; i<sub_images.size(); i++ )
 		sub_images[i].remove_transparent().save( QString( "%1.webp" ).arg( i ) );
 	
 	//Generate all possible frames
 	QList<QList<Frame>> all_frames;
 	for( auto original : originals ){
 		qDebug( "-------" );
-		all_frames.append( Frame::generate_frames( sub_images, original, originals.size() ) );
+		all_frames.append( Frame::generate_frames( sub_images, original, amount ) );
 	}
 	
 	for( auto frames : all_frames ){
