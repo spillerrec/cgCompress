@@ -61,6 +61,8 @@ QList<Image> Image::segment() const{
 		
 		content = cur_content;
 	}
+	if( content )
+		images.append( sub_image( first_line,0, img.width()-first_line, img.height() ) );
 	//TODO: grab the last image if content touches the right edge
 	
 	//TODO: check horizontal lines

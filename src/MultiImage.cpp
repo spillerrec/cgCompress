@@ -73,7 +73,7 @@ QList<Image> MultiImage::diff_fast( int& amount ) const{
 	
 	//Find all possible differences
 	for( int i=1; i<originals.size(); i++ )
-		sub_images.append( originals[i-1].difference( originals[i] ).segment() );
+		sub_images.append( originals[i-1].difference( originals[i] ) );
 	
 	return sub_images;
 }
@@ -86,7 +86,7 @@ QList<Image> MultiImage::diff_linear( int& amount ) const{
 	//Find all possible differences
 	for( int i=0; i<originals.size(); i++ )
 		for( int j=i+1; j<originals.size(); j++ )
-			sub_images.append( originals[i].difference( originals[j] ).segment() );
+			sub_images.append( originals[i].difference( originals[j] ) );
 	
 	return sub_images;
 }
@@ -98,8 +98,8 @@ QList<Image> MultiImage::diff_all( int& amount ) const{
 	//Find all possible differences
 	for( int i=0; i<amount; i++ )
 		for( int j=i+1; j<originals.size(); j++ ){
-			sub_images.append( originals[i].difference( originals[j] ).segment() );
-			sub_images.append( originals[j].difference( originals[i] ).segment() );
+			sub_images.append( originals[i].difference( originals[j] ) );
+			sub_images.append( originals[j].difference( originals[i] ) );
 		}
 	
 	return sub_images;
@@ -112,7 +112,12 @@ QList<Frame> MultiImage::optimize() const{
 	
 	//Differences
 	int amount;
-	QList<Image> sub_images = diff_linear( amount );
+	QList<Image> diff_images = diff_linear( amount );
+	
+	//Segmentation
+	QList<Image> sub_images;
+	for( auto diff : diff_images )
+		sub_images.append( diff.segment() );
 	
 	//Remove duplicates and auto-crop
 	sub_images = remove_duplicates( sub_images );
