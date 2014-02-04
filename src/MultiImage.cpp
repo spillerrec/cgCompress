@@ -31,9 +31,39 @@ QList<T> remove_duplicates( QList<T> elements ){
 	return list;
 }
 
-QList<Frame> MultiImage::lowest_cost( const QList<Image>& primitives, QList<QList<Frame>> all_frames ){
-	//TODO:
-	return QList<Frame>();
+std::pair<QList<Frame>,int> MultiImage::lowest_cost( const QList<int>& costs, QList<QList<Frame>> all_frames, QList<int> used ){
+	if( all_frames.isEmpty() ){
+		//Return cost
+		int cost = 0;
+		for( auto layer : used )
+			cost += costs[layer];
+		return std::make_pair( QList<Frame>(), cost );
+	}
+	else{
+		QList<Frame> frames = all_frames.first();
+		all_frames.pop_front();
+		
+		QList<Frame> best_frame;
+		int best_cost = INT_MAX;
+		
+		//Find best
+		for( auto frame : frames ){
+			QList<int> used_new = used;
+			for( auto layer : frame.layers )
+				if( !used_new.contains( layer ) )
+					used_new.append( layer ); //TODO: could be slow, use sorted lists?
+			
+			auto result = lowest_cost( costs, all_frames, used_new );
+			if( result.second < best_cost ){
+				best_cost = result.second;
+				best_frame = QList<Frame>();
+				best_frame.append( frame );
+				best_frame.append( result.first );
+			}
+		}
+		
+		return std::make_pair( best_frame, best_cost );
+	}
 }
 
 QList<Frame> MultiImage::optimize() const{
@@ -76,7 +106,7 @@ QList<Frame> MultiImage::optimize() const{
 		sub = sub.remove_transparent();
 	
 	//Calculate file sizes
-	QList<unsigned> sizes;
+	QList<int> sizes;
 	for( auto sub : sub_images )
 		sizes.append( sub.compressed_size( "webp" ) );
 	qDebug( "File sizes:" );
@@ -84,6 +114,10 @@ QList<Frame> MultiImage::optimize() const{
 		qDebug( "\t%d bytes", size );
 	
 	//Optimize
-	return lowest_cost( sub_images, all_frames );
+	auto best = lowest_cost( sizes, all_frames );
+	qDebug( "\nBest solution with size: %d bytes:", best.second );
+	for( auto frame : best.first )
+		frame.debug();
+	return best.first;
 }
 

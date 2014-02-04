@@ -21,11 +21,13 @@
 #include "Image.hpp"
 #include "Frame.hpp"
 
+#include <utility>
+
 class MultiImage {
 	private:
 		QList<Image> originals;
 		
-		static QList<Frame> lowest_cost( const QList<Image>& primitives, QList<QList<Frame>> all_frames );
+		static std::pair<QList<Frame>,int> lowest_cost( const QList<int>& costs, QList<QList<Frame>> all_frames, QList<int> used=QList<int>() );
 		
 	public:
 		MultiImage() { }
