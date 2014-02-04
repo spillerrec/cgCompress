@@ -17,6 +17,30 @@
 
 #include "Frame.hpp"
 
+//TODO: this is used in several places, find a fitting place to have this
+template<typename T>
+QList<T> remove_duplicates( QList<T> elements ){
+	QList<T> list;
+	
+	for( auto element : elements )
+		if( !list.contains( element ) )
+			list.append( element );
+	
+	return list;
+}
+
+bool Frame::operator==( const Frame& other ) const{
+	if( layers.count() != other.layers.count() )
+		return false;
+	
+	//This also matches reshuffled versions, which are technically different.
+	//However they do produce equal output, and the file size is the same, so we don't care.
+	for( auto layer : other.layers )
+		if( !layers.contains( layer ) )
+			return false;
+	
+	return true;
+}
 
 Image Frame::reconstruct() const{
 	Image image( QPoint(0,0), QImage() );
@@ -54,6 +78,6 @@ QList<Frame> Frame::generate_frames( QList<Image>& primitives, Image original, i
 		}
 	}
 	
-	return results;
+	return remove_duplicates( results );
 }
 

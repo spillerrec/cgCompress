@@ -35,6 +35,8 @@ class Frame {
 		Image reconstruct() const;
 		
 		static QList<Frame> generate_frames( QList<Image>& primitives, Image original, int start );
+		
+		bool operator==( const Frame& other ) const;
 };
 
 #endif
