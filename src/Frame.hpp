@@ -22,6 +22,9 @@
 
 #include <QList>
 
+class Frame;
+typedef QList<Frame> Layer;
+
 class Frame {
 	public:
 		QList<Image> primitives;
@@ -33,6 +36,7 @@ class Frame {
 		
 	public:
 		Image reconstruct() const;
+		void debug() const;
 		
 		static QList<Frame> generate_frames( QList<Image>& primitives, Image original, int start );
 		

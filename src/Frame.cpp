@@ -17,6 +17,8 @@
 
 #include "Frame.hpp"
 
+#include <iostream>
+
 //TODO: this is used in several places, find a fitting place to have this
 template<typename T>
 QList<T> remove_duplicates( QList<T> elements ){
@@ -49,11 +51,18 @@ Image Frame::reconstruct() const{
 	return image;
 }
 
+void Frame::debug() const{
+	std::cout << "Frame layers: ";
+	for( auto layer : layers )
+		std::cout << "\t" << layer;
+	std::cout << "\n";
+}
+
 QList<Frame> Frame::generate_frames( QList<Image>& primitives, Image original, int start ){
 	QList<Frame> results;
 	
 	for( int i=0; i<start; i++ ){
-		qDebug( "running" );
+		qDebug( "Generating frames: %d of %d", i+1, start );
 		Frame current( primitives );
 		current.layers.append( i );
 		results.append( generate_frames( primitives, original, start, current ) );

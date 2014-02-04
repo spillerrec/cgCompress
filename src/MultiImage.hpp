@@ -19,14 +19,19 @@
 #define MULTI_IMAGE_HPP
 
 #include "Image.hpp"
+#include "Frame.hpp"
 
 class MultiImage {
 	private:
-		
+		QList<Image> originals;
 		
 	public:
+		MultiImage() { }
+		MultiImage( QList<Image> originals ) : originals(originals) { }
 		
+		void append( Image original ){ originals.append( original ); }
 		
+		QList<Layer> optimize() const;
 };
 
 #endif
