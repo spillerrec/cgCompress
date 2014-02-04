@@ -88,9 +88,12 @@ QList<Frame> Frame::optimize_list( QList<Frame> list ){
 }
 
 Image Frame::reconstruct() const{
-	Image image( QPoint(0,0), QImage() );
-	for( auto layer : layers )
-		image = image.combine( primitives[layer] );
+	if( layers.size() == 0 )
+		return Image( QPoint(0,0), QImage() );
+	
+	Image image( primitives[layers[0]] );
+	for( int i=1; i<layers.size(); i++ )
+		image = image.combine( primitives[layers[i]] );
 	return image;
 }
 
@@ -110,7 +113,7 @@ QList<Frame> Frame::generate_frames( QList<Image>& primitives, Image original, i
 		current.layers.append( i );
 	QTime t;
 	t.start();
-		results.append( optimize_list( generate_frames( primitives, original, start, current ) ) );
+		results.append( optimize_list( generate_frames( primitives, original, start, current, primitives[i] ) ) );
 	qDebug( "generate_frames time: %d", t.elapsed() );
 	}
 	
@@ -118,19 +121,18 @@ QList<Frame> Frame::generate_frames( QList<Image>& primitives, Image original, i
 }
 
 
-QList<Frame> Frame::generate_frames( QList<Image>& primitives, Image original, int start, Frame current ){
+QList<Frame> Frame::generate_frames( QList<Image>& primitives, Image original, int start, Frame current, Image reconstructed ){
 	QList<Frame> results;
-	//TODO: Right now this algorithm allows for layers to be added which will be completely overdrawn later.
-	//   Find a way to either prevent that, or filter them out later
 	
-	if( original == current.reconstruct() )
+	if( original == reconstructed )
 		results.append( current );
 	else{
 		for( int i=start; i<primitives.size(); i++ ){
 			if( !current.layers.contains( i ) ){
 				Frame add( current );
 				add.layers.append( i );
-				results.append( generate_frames( primitives, original, start, add ) );
+				//TODO: bail if this doesn't affect a used area
+				results.append( generate_frames( primitives, original, start, add, reconstructed.combine( primitives[i] ) ) );
 			}
 		}
 	}

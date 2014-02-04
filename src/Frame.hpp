@@ -30,7 +30,7 @@ class Frame {
 		Frame( QList<Image> primitives ) : primitives( primitives ) { }
 		
 		static QList<Frame> optimize_list( QList<Frame> list );
-		static QList<Frame> generate_frames( QList<Image>& primitives, Image original, int start, Frame current );
+		static QList<Frame> generate_frames( QList<Image>& primitives, Image original, int start, Frame current, Image reconstructed );
 		
 	public:
 		Image reconstruct() const;

@@ -17,6 +17,8 @@
 
 #include "MultiImage.hpp"
 
+#include <climits>
+
 //TODO: this is used in several places, find a fitting place to have this
 template<typename T>
 QList<T> remove_duplicates( QList<T> elements ){
@@ -65,7 +67,8 @@ QList<Frame> MultiImage::optimize() const{
 	}
 	
 	//TODO: optimize 
-	
+	QList<Frame> best;
+	unsigned size = UINT_MAX;
 		
 	return QList<Frame>();
 }
