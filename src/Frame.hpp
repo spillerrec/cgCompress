@@ -22,9 +22,6 @@
 
 #include <QList>
 
-class Frame;
-typedef QList<Frame> Layer;
-
 class Frame {
 	public:
 		QList<Image> primitives;

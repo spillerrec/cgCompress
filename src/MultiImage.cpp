@@ -29,9 +29,9 @@ QList<T> remove_duplicates( QList<T> elements ){
 	return list;
 }
 
-QList<Layer> MultiImage::optimize() const{
+QList<Frame> MultiImage::optimize() const{
 	if( originals.count() == 0 )
-		return QList<Layer>();
+		return QList<Frame>();
 	
 	QList<Image> sub_images;
 	sub_images.append( originals );
@@ -50,6 +50,6 @@ QList<Layer> MultiImage::optimize() const{
 	for( int i=0; i<sub_images.count(); i++ )
 		sub_images[i].auto_crop().remove_transparent().save( QString( "%1.png" ).arg( i ) );
 		
-	return QList<Layer>();
+	return QList<Frame>();
 }
 

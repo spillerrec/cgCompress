@@ -31,7 +31,7 @@ class MultiImage {
 		
 		void append( Image original ){ originals.append( original ); }
 		
-		QList<Layer> optimize() const;
+		QList<Frame> optimize() const;
 };
 
 #endif
