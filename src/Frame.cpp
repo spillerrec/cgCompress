@@ -74,6 +74,8 @@ QList<Frame> Frame::generate_frames( QList<Image>& primitives, Image original, i
 
 QList<Frame> Frame::generate_frames( QList<Image>& primitives, Image original, int start, Frame current ){
 	QList<Frame> results;
+	//TODO: Right now this algorithm allows for layers to be added which will be completely overdrawn later.
+	//   Find a way to either prevent that, or filter them out later
 	
 	if( original == current.reconstruct() )
 		results.append( current );

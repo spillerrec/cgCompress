@@ -33,22 +33,39 @@ QList<Frame> MultiImage::optimize() const{
 	if( originals.count() == 0 )
 		return QList<Frame>();
 	
-	QList<Image> sub_images;
-	sub_images.append( originals );
-	for( int i=1; i<originals.count(); i++ ){
-		Image diff = originals[i-1].difference( originals[i] );
-		sub_images.append( diff.segment() );
+	//First part is the original images
+	QList<Image> sub_images( originals );
+	
+	//Find all possible differences
+	for( int i=0; i<originals.count(); i++ )
+		for( int j=i+1; j<originals.count(); j++ ){
+			sub_images.append( originals[i].difference( originals[j] ).segment() );
+			sub_images.append( originals[j].difference( originals[i] ).segment() );
+		}
+	
+	//Remove duplicates and auto-crop
+	sub_images = remove_duplicates( sub_images );
+	for( auto& sub : sub_images )
+		sub = sub.auto_crop();
+		
+	for( int i=0; i<sub_images.count(); i++ )
+		sub_images[i].remove_transparent().save( QString( "%1.png" ).arg( i ) );
+	
+	//Generate all possible frames
+	QList<QList<Frame>> all_frames;
+	for( auto original : originals ){
+		qDebug( "-------" );
+		all_frames.append( Frame::generate_frames( sub_images, original, originals.size() ) );
 	}
 	
-	QList<Frame> frames = Frame::generate_frames( sub_images, originals[originals.size()-1], originals.size() );
-	qDebug( "Frames amount: %d", frames.count() );
+	for( auto frames : all_frames ){
+		qDebug( "-------" );
+		for( auto frame : frames )
+			frame.debug();
+	}
 	
-	for( auto frame : frames )
-		frame.debug();
+	//TODO: optimize 
 	
-	
-	for( int i=0; i<sub_images.count(); i++ )
-		sub_images[i].auto_crop().remove_transparent().save( QString( "%1.png" ).arg( i ) );
 		
 	return QList<Frame>();
 }
