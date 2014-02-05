@@ -36,6 +36,12 @@ QByteArray Image::to_byte_array( const char* format ) const{
 	return data;
 }
 
+Image Image::resize( int size ) const{
+	QImage scaled = img.scaled( size, size, Qt::KeepAspectRatio, Qt::SmoothTransformation );
+	//TODO: remove alpha
+	return Image( pos, scaled );
+}
+
 bool content_in_vertical_line( QImage img, int x ){
 	for( int iy=0; iy<img.height(); iy++ )
 		if( qAlpha( img.pixel(x,iy) ) != 0 )

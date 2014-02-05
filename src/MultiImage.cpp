@@ -16,6 +16,7 @@
 */
 
 #include "MultiImage.hpp"
+#include "OraSaver.hpp"
 
 #include <climits>
 
@@ -157,6 +158,7 @@ QList<Frame> MultiImage::optimize() const{
 	qDebug( "\nBest solution with size: %d bytes:", best.second );
 	for( auto frame : best.first )
 		frame.debug();
+	OraSaver( sub_images, best.first ).save( "test.ora", "png" );
 	return best.first;
 }
 

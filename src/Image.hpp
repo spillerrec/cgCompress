@@ -30,6 +30,8 @@ class Image {
 		Image( QString path ) : img( QImage(path).convertToFormat(QImage::Format_ARGB32) ) { }
 		Image( QPoint pos, QImage img ) : pos(pos), img(img) { }
 		
+		QPoint get_pos() const{ return pos; }
+		QImage qimg() const{ return img; }
 		bool save( QString path ){ return img.save( path ); }
 		QByteArray to_byte_array( const char* format ) const;
 		
@@ -37,6 +39,7 @@ class Image {
 			return QRect( pos, img.size() ).intersects( QRect( other.pos, other.img.size() ) );
 		}
 		
+		Image resize( int size ) const;
 		Image sub_image( int x, int y, int width, int height ) const{
 			return Image( pos+QPoint(x,y), img.copy( x,y, width,height ) );
 		}
