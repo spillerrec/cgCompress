@@ -104,7 +104,7 @@ void Frame::debug() const{
 	std::cout << "\n";
 }
 
-QList<Frame> Frame::generate_frames( QList<Image>& primitives, Image original, int start ){
+QList<Frame> Frame::generate_frames( const QList<Image>& primitives, const Image& original, int start ){
 	QList<Frame> results;
 	
 	for( int i=0; i<start; i++ ){
@@ -121,7 +121,7 @@ QList<Frame> Frame::generate_frames( QList<Image>& primitives, Image original, i
 }
 
 
-QList<Frame> Frame::generate_frames( QList<Image>& primitives, Image original, int start, Frame current, Image reconstructed ){
+QList<Frame> Frame::generate_frames( const QList<Image>& primitives, const Image& original, int start, const Frame& current, const Image& reconstructed, int depth  ){
 	QList<Frame> results;
 	
 	if( original == reconstructed )
@@ -129,6 +129,9 @@ QList<Frame> Frame::generate_frames( QList<Image>& primitives, Image original, i
 	else{
 		QList<Image> areas = reconstructed.difference( original ).segment();
 		for( int i=start; i<primitives.size(); i++ ){
+			if( depth == 0 )
+				std::cout << "x";
+			
 			if( !current.layers.contains( i ) ){
 				//Skip if this primitive does not affect wrong areas
 				bool relevant = false;
@@ -140,13 +143,17 @@ QList<Frame> Frame::generate_frames( QList<Image>& primitives, Image original, i
 				if( !relevant )
 					continue;
 				
-				//TODO: skip if it doesn't affect it positively?
-				
-				Frame add( current );
-				add.layers.append( i );
-				results.append( generate_frames( primitives, original, start, add, reconstructed.combine( primitives[i] ) ) );
+				//Skip if it doesn't affect it positively
+				if( reconstructed.reduces_difference( original, primitives[i] ) ){
+					Frame add( current );
+					add.layers.append( i );
+					results.append( generate_frames( primitives, original, start, add, reconstructed.combine( primitives[i] ), depth+1 ) );
+				}
 			}
 		}
+		
+		if( depth == 0 )
+			std::cout << "\n";
 	}
 	
 	return results;

@@ -158,7 +158,7 @@ QList<Frame> MultiImage::optimize() const{
 	qDebug( "\nBest solution with size: %d bytes:", best.second );
 	for( auto frame : best.first )
 		frame.debug();
-	OraSaver( sub_images, best.first ).save( "test.ora", "png" );
+	OraSaver( sub_images, best.first ).save( "output.cgcompress", "webp" );
 	return best.first;
 }
 

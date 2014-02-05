@@ -117,6 +117,33 @@ Image Image::difference( Image input ) const{
 	return Image( {0,0}, output );
 }
 
+bool Image::reduces_difference( Image original, Image diff ) const{
+	//TODO: this and original must be larger than diff
+	int balance = 0;
+	
+	int width = diff.pos.x() + diff.img.width();
+	int height = diff.pos.y() + diff.img.height();
+	for( int iy=diff.pos.y(); iy<height; iy++ ){
+		const QRgb* base = (const QRgb*)         img.constScanLine( iy-pos.y() )          -          pos.x();
+		const QRgb* org =  (const QRgb*)original.img.constScanLine( iy-original.pos.y() ) - original.pos.x();
+		const QRgb* over = (const QRgb*)diff    .img.constScanLine( iy-diff.pos.y() )     -     diff.pos.x();
+		
+		for( int ix=diff.pos.x(); ix<width; ix++ ){
+			if( base[ix] != over[ix] ){
+				if( qAlpha( over[ix] ) == 255 ){
+					if( base[ix] == org[ix] )
+						balance--;
+					else if( over[ix] == org[ix] )
+						balance++;
+				}
+			}
+			//TODO: support 1-254 alpha
+		}
+	}
+	
+	return balance > 0;
+}
+
 Image Image::remove_transparent() const{
 	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
 	

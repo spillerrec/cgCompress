@@ -50,6 +50,7 @@ class Image {
 		
 		int compressed_size( const char* format ) const;
 		Image difference( Image img ) const;
+		bool reduces_difference( Image original, Image diff ) const;
 		Image remove_transparent() const;
 		Image auto_crop() const;
 		
