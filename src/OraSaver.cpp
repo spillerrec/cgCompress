@@ -125,7 +125,7 @@ void OraSaver::save( QString path, const char* format ) const{
 	
 	//* Thumbnail
 	Image thumb = frames.first().reconstruct().resize( 256 );
-	addByteArray( zf, "Thumbnails/thumbnail.png", thumb.to_byte_array( "png" ) );
+	addByteArray( zf, "Thumbnails/thumbnail.webp", thumb.to_byte_array( "webp", 95 ) );
 	//*/
 	
 	//Find used primitives

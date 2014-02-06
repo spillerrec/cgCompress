@@ -32,8 +32,8 @@ class Image {
 		
 		QPoint get_pos() const{ return pos; }
 		QImage qimg() const{ return img; }
-		bool save( QString path ){ return img.save( path ); }
-		QByteArray to_byte_array( const char* format ) const;
+		bool save( QString path, int quality=100 ){ return img.save( path, nullptr, quality ); }
+		QByteArray to_byte_array( const char* format, int quality=100 ) const;
 		
 		bool overlaps( Image other ) const{
 			return QRect( pos, img.size() ).intersects( QRect( other.pos, other.img.size() ) );
