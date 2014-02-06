@@ -144,6 +144,39 @@ bool Image::reduces_difference( Image original, Image diff ) const{
 	return balance > 0;
 }
 
+Image Image::clean_alpha( int kernel_size, int threshold ) const{
+	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
+	
+	for( int iy=0; iy<output.height(); iy++ ){
+		QRgb* out = (QRgb*)output.scanLine( iy );
+		const QRgb* in = (const QRgb*)img.scanLine( iy );
+		for( int ix=0; ix<output.width(); ix++ )
+			if( qAlpha( in[ix] ) == 0 ){
+				out[ix] = qRgba( 0,0,0,0 );
+				
+				int amount = 0;
+				int half = kernel_size / 2;
+				int x_start = max( ix-half, 0 );
+				int x_end = min( ix+kernel_size-half, img.width() );
+				int y_start = max( iy-half, 0 );
+				int y_end = min( iy+kernel_size-half, img.height() );
+				for( int jy=y_start; jy<y_end; jy++ )
+					for( int jx=x_start; jx<x_end; jx++ )
+						if( qAlpha( img.pixel(jx,jy) ) == 255 )
+							amount++;
+				
+				if( amount > threshold )
+					out[ix] = qRgba( qRed(in[ix]), qGreen(in[ix]), qBlue(in[ix]), 255 );
+				else
+					out[ix] = in[ix];
+			}
+			else
+				out[ix] = in[ix];
+	}
+			
+	return Image( pos, output );
+}
+
 Image Image::remove_transparent() const{
 	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
 	
@@ -194,6 +227,27 @@ LEFT_BREAK:
 RIGHT_BREAK:
 	
 	return sub_image( left,top, img.width()-left-right, img.height()-top-bottom );
+}
+
+
+Image Image::optimize_filesize( const char* format ) const{
+	//Start with the basic image
+	Image best = remove_transparent();
+	int best_size = best.compressed_size( format );
+	int original_size = best_size;
+	
+	for( int i=0; i<7; i++ )
+		for( int j=0; j<i*i; j++ ){
+			Image current = clean_alpha( i, j ).remove_transparent();
+			int size = current.compressed_size( format );
+			if( size < best_size ){
+				best_size = size;
+				best = current;
+			}
+		}
+	
+	qDebug( "Reduced: %f", (original_size-best_size) * 100.0 / original_size );
+	return best;
 }
 
 

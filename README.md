@@ -11,6 +11,7 @@ Status
 ------
 
 Prof of concept
+
 Performance needs to be greatly improved to be practical. The optimization problem is exponential, and while several short-cuts are already implemented, performance is wacky. Currently some cgs might just not be possible to do in practical time, while others only takes a few seconds.
 
 Work still needs to be done on segmentation. Segmenting out to very small areas can help file compression, however it kills performance because of the algorithmic complexity. However not segmenting enough gives makes it fail to perform some cross-frame optimizations. We need to separate this into two, segmenting for differentiating unique features, and segmenting for file size optimization.
