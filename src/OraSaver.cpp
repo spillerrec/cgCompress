@@ -40,7 +40,7 @@ void setTime( tm_zip &tm, QDate date, QTime time ){
 	tm.tm_year = date.year();
 }
 
-bool addByteArray( zipFile &zf, QString name, QByteArray arr ){
+bool addByteArray( zipFile &zf, QString name, QByteArray arr, int compression=0 ){
 	zip_fileinfo zi;
 
 	zi.dosDate = 0;
@@ -54,7 +54,8 @@ bool addByteArray( zipFile &zf, QString name, QByteArray arr ){
 	int err = zipOpenNewFileInZip3_64(
 			zf, name.toUtf8().constData(), &zi
 		,	NULL, 0, NULL, 0, NULL // comment
-		,	0, 0, 0
+		, (compression != 0) ? Z_DEFLATED : 0, compression, 0
+		//,	0, 0, 0
 		,	-MAX_WBITS, DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY
 		,	NULL, 0, 0  // password, crcFile, zip64);
 		);
@@ -66,8 +67,8 @@ bool addByteArray( zipFile &zf, QString name, QByteArray arr ){
 	return zipCloseFileInZip( zf ) == ZIP_OK;;
 }
 
-bool addStringFile( zipFile &zf, QString name, QString contents ){
-	return addByteArray( zf, name, contents.toUtf8() );
+bool addStringFile( zipFile &zf, QString name, QString contents, bool compress=false ){
+	return addByteArray( zf, name, contents.toUtf8(), compress ? 9 : 0 );
 }
 
 bool addFileInfo( zipFile &zf, QFileInfo file ){
@@ -160,7 +161,7 @@ void OraSaver::save( QString path, const char* format ) const{
 	stack += "</image>";
 	
 	//TODO: compress this
-	addStringFile( zf, "stack.xml", stack );
+	addStringFile( zf, "stack.xml", stack, true );
 	
 	zipClose( zf, NULL );
 }

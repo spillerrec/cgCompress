@@ -37,8 +37,9 @@ QByteArray Image::to_byte_array( const char* format ) const{
 }
 
 Image Image::resize( int size ) const{
+	size = min( size, img.width() );
+	size = min( size, img.height() );
 	QImage scaled = img.scaled( size, size, Qt::KeepAspectRatio, Qt::SmoothTransformation );
-	//TODO: remove alpha
 	return Image( pos, scaled );
 }
 
