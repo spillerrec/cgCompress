@@ -124,14 +124,24 @@ QList<Frame> Frame::generate_frames( const QList<Image>& primitives, const Image
 QList<Frame> Frame::generate_frames( const QList<Image>& primitives, const Image& original, int start, const Frame& current, const Image& reconstructed, int depth  ){
 	QList<Frame> results;
 	
-	if( original == reconstructed )
+//	for( int i=0; i<depth; i++ )
+//		std::cout << "  ";
+//	std::cout << current.layers.last() << "\n";
+	
+	if( original == reconstructed ){
 		results.append( current );
+//		for( auto layer : current.layers )
+//			std::cout << layer << " ";
+//		std::cout << "\n";
+	}
 	else{
 		QList<Image> areas = reconstructed.difference( original ).segment();
+		for( auto& area : areas )
+			area = area.auto_crop();
+		
+		//Find the primitives we want to test this round
+		QList<int> testing;
 		for( int i=start; i<primitives.size(); i++ ){
-			if( depth == 0 )
-				std::cout << "x";
-			
 			if( !current.layers.contains( i ) ){
 				//Skip if this primitive does not affect wrong areas
 				bool relevant = false;
@@ -143,16 +153,37 @@ QList<Frame> Frame::generate_frames( const QList<Image>& primitives, const Image
 				if( !relevant )
 					continue;
 				
+				//* Only test primitives which overlaps the ones in testing
+				//The rest will be tried in later stages.
+				//This lowers the amount of useless frames which are just rearranged versions of each other
+				if( testing.size() != 0 ){
+					bool relevant = false;
+					for( auto test : testing )
+						if( primitives[test].overlaps( primitives[i] ) ){
+							relevant = true;
+							break;
+						}
+					if( !relevant )
+						continue;
+				}
+				//*/
+				testing.append( i );
+			}
+		}
+		
+		for( auto i : testing ){
+			if( depth == 1 )
+				std::cout << "x";
+				
 				//Skip if it doesn't affect it positively
 				if( reconstructed.reduces_difference( original, primitives[i] ) ){
 					Frame add( current );
 					add.layers.append( i );
 					results.append( generate_frames( primitives, original, start, add, reconstructed.combine( primitives[i] ), depth+1 ) );
 				}
-			}
 		}
 		
-		if( depth == 0 )
+		if( depth == 1 )
 			std::cout << "\n";
 	}
 	

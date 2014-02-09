@@ -121,6 +121,7 @@ Image Image::difference( Image input ) const{
 bool Image::reduces_difference( Image original, Image diff ) const{
 	//TODO: this and original must be larger than diff
 	int balance = 0;
+	int count = 0;
 	
 	int width = diff.pos.x() + diff.img.width();
 	int height = diff.pos.y() + diff.img.height();
@@ -130,6 +131,8 @@ bool Image::reduces_difference( Image original, Image diff ) const{
 		const QRgb* over = (const QRgb*)diff    .img.constScanLine( iy-diff.pos.y() )     -     diff.pos.x();
 		
 		for( int ix=diff.pos.x(); ix<width; ix++ ){
+			if( qAlpha( over[ix] ) > 0 )
+				count++;
 			if( base[ix] != over[ix] ){
 				if( qAlpha( over[ix] ) == 255 ){
 					if( base[ix] == org[ix] )
@@ -142,7 +145,7 @@ bool Image::reduces_difference( Image original, Image diff ) const{
 		}
 	}
 	
-	return balance > 0;
+	return balance > count*0.0;
 }
 
 Image Image::clean_alpha( int kernel_size, int threshold ) const{
