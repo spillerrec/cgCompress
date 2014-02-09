@@ -46,10 +46,14 @@ class Image {
 		
 		QList<Image> segment() const;
 		
+		Image remove_alpha() const;
+		QList<Image> diff_segment( Image diff ) const;
+		
 		Image combine( Image on_top ) const;
 		
 		int compressed_size( const char* format ) const;
 		Image difference( Image img ) const;
+		Image remove_area( Image img ) const;
 		bool reduces_difference( Image original, Image diff ) const;
 		Image clean_alpha( int kernel_size, int threshold ) const;
 		Image remove_transparent() const;

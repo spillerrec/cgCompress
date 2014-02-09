@@ -15,32 +15,37 @@
 	along with cgCompress.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef MULTI_IMAGE_HPP
-#define MULTI_IMAGE_HPP
+#ifndef CONVERTER_HPP
+#define CONVERTER_HPP
 
 #include "Image.hpp"
-#include "Frame.hpp"
 
 #include <utility>
 
-class MultiImage {
+#include <QList>
+#include <QByteArray>
+
+class Converter {
 	private:
-		QList<Image> originals;
-		
-		QList<Image> diff_fast( int& amount ) const;
-		QList<Image> diff_linear( int& amount ) const;
-		QList<Image> diff_all( int& amount ) const;
-		
-		static std::pair<QList<Frame>,int> lowest_cost( const QList<int>& costs, QList<QList<Frame>> all_frames, QList<int> used=QList<int>() );
+		const QList<Image>& base_images;
+		int from;
+		int to;
+		Image primitive;
+		QByteArray data;
 		
 	public:
-		MultiImage() { }
-		MultiImage( QList<Image> originals ) : originals(originals) { }
+		Converter( const QList<Image>& base_images, int from, int to )
+			:	base_images(base_images)
+			,	from(from), to(to)
+			,	primitive( base_images[from].difference( base_images[to] ) ) {
+				data = primitive.remove_transparent().auto_crop().to_byte_array( "webp" );
+			}
+			
+			int get_from() const{ return from; }
+			int get_to() const{ return to; }
+			QByteArray get_data() const{ return data; }
+			Image get_primitive() const{ return primitive; }
 		
-		void append( Image original ){ originals.append( original ); }
-		
-		QList<Frame> optimize( QString name ) const;
-		QList<Frame> optimize2( QString name ) const;
 };
 
 #endif

@@ -81,6 +81,71 @@ QList<Image> Image::segment() const{
 	return images;
 }
 
+Image Image::remove_alpha() const{
+	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
+	
+	for( int iy=0; iy<output.height(); iy++ ){
+		QRgb* out = (QRgb*)output.scanLine( iy );
+		for( int ix=0; ix<output.width(); ix++ )
+			if( qAlpha( out[ix] ) == 0 )
+				out[ix] = qRgba( qRed(out[ix]),qGreen(out[ix]),qBlue(out[ix]),255 );
+	}
+			
+	return Image( pos, output );
+}
+
+Image Image::remove_area( Image input ) const{
+	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
+	
+	for( int iy=input.pos.y(); iy<input.pos.y()+input.img.height(); iy++ ){
+		QRgb* out = (QRgb*)output.scanLine( iy );
+		for( int ix=input.pos.x(); ix<input.pos.x()+input.img.width(); ix++ )
+			out[ix] = qRgba( qRed(out[ix]),qGreen(out[ix]),qBlue(out[ix]),0 );
+	}
+			
+	return Image( pos, output );
+}
+
+QList<Image> Image::diff_segment( Image diff ) const{
+	if( !overlaps( diff ) )
+		return QList<Image>() << *this << diff;
+	
+	Image diff_diff = difference( diff );
+	Image diff_diff2 = diff.difference( *this );
+//	diff_diff.save( "diff diff.png" );
+//	diff_diff2.save( "diff diff2.png" );
+	
+	/*
+	remove_area( diff_diff.auto_crop() ).save( "this diff diff removed.png" );
+	remove_area( diff_diff2.auto_crop() ).save( "this diff diff2 removed.png" );
+	diff.remove_area( diff_diff.auto_crop() ).save( "diff diff diff removed.png" );
+	diff.remove_area( diff_diff2.auto_crop() ).save( "diff diff diff2 removed.png" );
+	//*/
+	//*
+	Image new_diff1 = remove_area( diff_diff.auto_crop() ).remove_area( diff_diff2.auto_crop() );
+//	new_diff1.save( "this diff diff removed.png" );
+	Image new_diff2 = diff.remove_area( diff_diff.auto_crop() ).remove_area( diff_diff2.auto_crop() );
+//	new_diff2.save( "diff diff diff removed.png" );
+	
+//	remove_area( new_diff2.auto_crop() ).save( "_test this.png" );
+//	diff.remove_area( new_diff1.auto_crop() ).save( "_test diff.png" );
+	//*/
+	
+	QList<Image> new_diffs;
+	new_diffs << new_diff1;
+	new_diffs << diff_diff2;
+	new_diffs << remove_area( new_diff2.auto_crop() );
+	new_diffs << diff.remove_area( new_diff1.auto_crop() );
+	
+	for( int i=new_diffs.size()-1; i>=0; i-- )
+		if( new_diffs[i].auto_crop().img.size().isEmpty() )
+			new_diffs.removeAt( i );
+	
+//	for( int i=0; i<new_diffs.size(); i++ )
+//		new_diffs[i].save( QString( "diff %1.png" ).arg( i ) );
+	return new_diffs;
+}
+
 Image Image::combine( Image on_top ) const{
 	QPoint tl{ min( pos.x(), on_top.pos.x() ), min( pos.y(), on_top.pos.y() ) };
 	int width = max( pos.x()+img.width(), on_top.pos.x()+on_top.img.width() ) - tl.x();

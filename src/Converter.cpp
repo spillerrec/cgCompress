@@ -15,26 +15,7 @@
 	along with cgCompress.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <QCoreApplication>
-#include <QStringList>
-#include <QFileInfo>
-
-#include "MultiImage.hpp"
+#include "Converter.hpp"
 
 
-int main( int argc, char* argv[] ){
-	QCoreApplication app( argc, argv );
-	
-	QStringList args = app.arguments();
-	args.removeFirst();
-	
-	MultiImage multi_img;
-	for( auto arg : args )
-		multi_img.append( Image( arg ) );
-	
-	auto frames = multi_img.optimize2( QFileInfo(args[0]).baseName() );
-	
-	//TODO: save frames
-	
-	return 0;
-}
+

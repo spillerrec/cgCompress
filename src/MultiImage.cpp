@@ -17,6 +17,7 @@
 
 #include "MultiImage.hpp"
 #include "OraSaver.hpp"
+#include "Converter.hpp"
 
 #include <climits>
 
@@ -106,8 +107,23 @@ QList<Image> MultiImage::diff_all( int& amount ) const{
 	return sub_images;
 }
 
+QList<Image> segment_all( QList<Image> diffs ){
+	diffs.removeFirst();
+	for( int iter=0; iter<1; iter++ ){
+		QList<Image> temp;
+		for( int i=0; i<diffs.size(); i++ )
+			for( int j=i+1; j<diffs.size(); j++ )
+				temp << diffs[i].diff_segment( diffs[j] );
+		diffs = remove_duplicates( temp );
+	}
+	
+	for( auto& diff : diffs )
+		diff = diff.remove_transparent().auto_crop();
+	return remove_duplicates( diffs );
+}
 
-QList<Frame> MultiImage::optimize() const{
+
+QList<Frame> MultiImage::optimize( QString name ) const{
 	if( originals.size() == 0 )
 		return QList<Frame>();
 	
@@ -117,17 +133,35 @@ QList<Frame> MultiImage::optimize() const{
 	
 	//Segmentation
 	QList<Image> sub_images;
+	//*
 	for( auto diff : diff_images )
-		sub_images.append( diff.segment() );
+		sub_images.append( diff);//.segment() );
+	//diff_images[3].diff_segment( diff_images[4] );
+	/*/
+	for( int i=0; i<amount; i++ )
+		sub_images.append( diff_images[i] );
+	sub_images << segment_all( diff_images );
+	//*/
+		
+	for( int i=0; i<sub_images.size(); i++ )
+		sub_images[i].save( QString( "%1.png" ).arg( i ) );
 	
 	//Remove duplicates and auto-crop
 	sub_images = remove_duplicates( sub_images );
 	for( auto& sub : sub_images )
 		sub = sub.auto_crop();
+	sub_images = remove_duplicates( sub_images );
 		
-	for( int i=0; i<sub_images.size(); i++ )
-		sub_images[i].remove_transparent().save( QString( "%1.webp" ).arg( i ) );
+//	for( auto& sub : sub_images )
+//		sub = sub.optimize_filesize( "webp" );
+//	for( int i=amount; i<sub_images.size(); i++ )
+//		sub_images[i] = sub_images[i].optimize_filesize( "webp" );
 	
+	/*
+	for( int i=6; i<=7; i++ )
+		for( int j=0; j<i*i; j++ )
+			sub_images[3].clean_alpha( i, j ).remove_transparent().save( QString( "test/clean %1-%2.webp" ).arg( i ).arg( j ) );
+	//*/
 	//Generate all possible frames
 	QList<QList<Frame>> all_frames;
 	for( auto original : originals ){
@@ -158,7 +192,103 @@ QList<Frame> MultiImage::optimize() const{
 	qDebug( "\nBest solution with size: %d bytes:", best.second );
 	for( auto frame : best.first )
 		frame.debug();
-	OraSaver( sub_images, best.first ).save( "output.cgcompress", "webp" );
+	OraSaver( sub_images, best.first ).save( name + ".cgcompress", "webp" );
 	return best.first;
+}
+
+void add_converter( QList<Converter>& used_converters, QList<QList<int>>& frames, const QList<Converter>& converters, int amount ){
+	if( amount == frames.size() )
+		return;
+	
+	QList<int> has;
+	for( auto frame : frames )
+		for( auto layer : frame )
+			if( !has.contains( layer ) )
+				has << layer;
+	QList<int> used;
+	for( auto frame : frames )
+		used << frame.last();
+	
+	int best_converter = -1;
+	int filesize = INT_MAX;
+	for( int i=0; i<converters.size(); i++ ){
+		if( has.contains( converters[i].get_from() ) && !used.contains( converters[i].get_to() ) )
+			if( converters[i].get_data().size() < filesize ){
+				best_converter = i;
+				filesize = converters[i].get_data().size();
+			}
+	}
+	if( best_converter == -1 )
+		qFatal( "No converter could be found!" );
+	
+	QList<int> from_frame;
+	for( auto frame : frames )
+		if( frame.last() == converters[best_converter].get_from() ){
+			from_frame = frame;
+			break;
+		}
+	
+	used_converters << converters[best_converter];
+	frames << ( from_frame << converters[best_converter].get_to() );
+	
+	add_converter( used_converters, frames, converters, amount );
+}
+
+
+QList<Frame> MultiImage::optimize2( QString name ) const{
+	QList<Converter> converters;
+	for( int i=0; i<originals.size(); i++ )
+		for( int j=i+1; j<originals.size(); j++ ){
+			converters << Converter( originals, i, j );
+			converters << Converter( originals, j, i );
+		}
+	qDebug( "%d converters made", converters.size() );
+	
+	QList<QByteArray> orgs_data;
+	for( auto org : originals )
+		orgs_data << org.to_byte_array( "webp" );
+	
+	int best_start = 0;
+	int filesize = INT_MAX;
+	for( int i=0; i<orgs_data.size(); i++ ){
+		if( orgs_data.size() < filesize ){
+			best_start = i;
+			filesize = orgs_data.size();
+		}
+	}
+	qDebug( "Smallest image is: %d", best_start );
+	
+	QList<QList<int>> combined;
+	QList<Converter> used_converters;
+	combined << ( QList<int>() << best_start  );
+	
+	add_converter( used_converters, combined, converters, originals.size() );
+	
+	QList<Image> primitives;
+	primitives << originals[best_start];
+	for( auto used : used_converters )
+		primitives.append( used.get_primitive().remove_transparent().auto_crop() );
+	
+	qSort( combined.begin(), combined.end(), []( const QList<int>& first, const QList<int>& last ){ return first.last() < last.last(); } );
+	
+	QList<Frame> frames;
+	for( auto comb : combined ){
+		Frame f( primitives );
+		f.layers << 0;
+		for( int j=1; j<comb.size(); j++ ){
+			int from = f.layers.last();
+			from = (j == 1) ? best_start : comb[j-1];
+			for( int i=0; i<used_converters.size(); i++ ){
+				if( from == used_converters[i].get_from() && comb[j] == used_converters[i].get_to() ){
+					f.layers << i+1;
+					break;
+				}
+			}
+		}
+		frames << f;
+	}
+	
+	OraSaver( primitives, frames ).save( name + ".cgcompress", "webp" );
+	return frames;
 }
 
