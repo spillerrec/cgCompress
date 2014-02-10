@@ -8,9 +8,11 @@ cgCompress is an attempt to automatize this process, and reduce file size as muc
 ## Status
 
 - Prof of concept
-- Performance needs to be greatly improved to be practical. The optimization problem is exponential, and while several short-cuts are already implemented, performance is wacky. Currently some cgs might just not be possible to do in practical time, while others only takes a few seconds.
-- Work still needs to be done on segmentation. Segmenting out to very small areas can help file compression, however it kills performance because of the algorithmic complexity. However not segmenting enough gives makes it fail to perform some cross-frame optimizations. We need to separate this into two, segmenting for differentiating unique features, and segmenting for file size optimization.
-
+- A greedy algorithm have been implemented which is O( n^2 ) instead of O( n^n ), but it does not guaranty optimal solutions. It does however produce pretty good results, but it needs to be evaluated.
+- Segmentation needs to be redone, and done with respect to file size.
+- Some images contain the same image, but with color changes. Some success have been had with alternative composite methods, but still needs to be further investigated.
+- The input images must currently not contain alpha, which means we can't optimize character sprites. Make it work!
+- Check if the reconstructed images are correct. Lossless is 100%, not 99.999% because of programmer stupidity.
 - A proper interface also needs to be made
 
 ## Output format
@@ -18,7 +20,7 @@ cgCompress is an attempt to automatize this process, and reduce file size as muc
 A custom image format is used for output. It is based on OpenRaster with the following modifications:
 - Multiple images are supported, which is done by interpreting <stack> elements which are direct descendants of the root <image> element as separate images. When the specification for MultiplePages in OpenRaster appear, this format might be updated to reflect that. Thus, **this format might change!**
 - Thumbnails may use other formats than PNG.
-- mergedimage.png is not required. It would be rather pointless to use space on that...
+- mergedimage.png is not required. We don't want to waste space on that.
 
 ### Support
 
