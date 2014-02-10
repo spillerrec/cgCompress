@@ -30,6 +30,8 @@ class Image {
 		Image( QString path ) : img( QImage(path).convertToFormat(QImage::Format_ARGB32) ) { }
 		Image( QPoint pos, QImage img ) : pos(pos), img(img) { }
 		
+		bool is_valid() const{ return !img.size().isEmpty(); }
+		
 		QPoint get_pos() const{ return pos; }
 		QImage qimg() const{ return img; }
 		bool save( QString path, int quality=100 ){ return img.save( path, nullptr, quality ); }
@@ -50,6 +52,8 @@ class Image {
 		QList<Image> diff_segment( Image diff ) const;
 		
 		Image combine( Image on_top ) const;
+		
+		Image contain_both( Image diff ) const;
 		
 		int compressed_size( const char* format ) const;
 		Image difference( Image img ) const;

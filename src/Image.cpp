@@ -213,6 +213,38 @@ bool Image::reduces_difference( Image original, Image diff ) const{
 	return balance > count*0.0;
 }
 
+static bool color_equal( QRgb c1, QRgb c2 ){
+	return qRed( c1 ) == qRed( c2 )
+		&&	qGreen( c1 ) == qGreen( c2 )
+		&&	qBlue( c1 ) == qBlue( c2 )
+		;
+}
+
+Image Image::contain_both( Image input ) const{
+	//TODO: images must be the same size and at same point
+	
+	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
+	
+	for( int iy=0; iy<output.height(); iy++ ){
+		QRgb* out = (QRgb*)output.scanLine( iy );
+		const QRgb* in = (const QRgb*)input.img.constScanLine( iy );
+		for( int ix=0; ix<output.width(); ix++ ){
+			if( qAlpha( in[ix] ) == 255 || qAlpha( out[ix] ) == 255 ){
+				if( !color_equal( in[ix], out[ix] ) )
+					return Image( {0,0}, QImage() ); //Can't contain both!
+				else
+					out[ix] = qRgba( qRed(out[ix]), qGreen(out[ix]), qBlue(out[ix]), 255 );
+			}
+			else{
+				if( in[ix] != out[ix] )
+					out[ix] = qRgba( 0,0,0,0 );
+			}
+		}
+	}
+	
+	return Image( {0,0}, output );
+}
+
 Image Image::clean_alpha( int kernel_size, int threshold ) const{
 	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
 	

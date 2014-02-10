@@ -229,6 +229,7 @@ void add_converter( QList<Converter>& used_converters, QList<QList<int>>& frames
 		}
 	
 	used_converters << converters[best_converter];
+	//if( converters[best_converter].get_primitive().is_valid() )
 	frames << ( from_frame << converters[best_converter].get_to() );
 	
 	add_converter( used_converters, frames, converters, amount );
@@ -263,13 +264,12 @@ QList<Frame> MultiImage::optimize2( QString name ) const{
 	combined << ( QList<int>() << best_start  );
 	
 	add_converter( used_converters, combined, converters, originals.size() );
+	qSort( combined.begin(), combined.end(), []( const QList<int>& first, const QList<int>& last ){ return first.last() < last.last(); } );
 	
 	QList<Image> primitives;
 	primitives << originals[best_start];
 	for( auto used : used_converters )
-		primitives.append( used.get_primitive().remove_transparent().auto_crop() );
-	
-	qSort( combined.begin(), combined.end(), []( const QList<int>& first, const QList<int>& last ){ return first.last() < last.last(); } );
+		primitives.append( used.get_primitive() );
 	
 	QList<Frame> frames;
 	for( auto comb : combined ){
@@ -287,6 +287,34 @@ QList<Frame> MultiImage::optimize2( QString name ) const{
 		}
 		frames << f;
 	}
+	
+	//* Try to reuse planes if possible
+	for( int i=0; i<primitives.size(); i++ ){
+		if( !primitives[i].is_valid() )
+			continue;
+		for( int j=i+1; j<primitives.size(); j++ ){
+			if( !primitives[j].is_valid() )
+				continue;
+			
+			Image result = primitives[i].contain_both( primitives[j] );
+			if( result.is_valid() ){
+				result.save( QString( "contain %1 %2.png" ).arg( i ).arg( j ) );
+				
+				primitives[i] = result;
+				primitives[j] = Image( {0,0}, QImage() );
+				
+				for( auto& frame : frames )
+					for( auto& layer : frame.layers )
+						if( layer == j )
+							layer = i;
+			}
+		}
+	}
+	//*/
+	
+	for( int i=1; i<primitives.size(); i++ )
+		if( primitives[i].is_valid() )
+			primitives[i] = primitives[i].auto_crop()/*/.remove_transparent();/*/.optimize_filesize( "webp" );//*/
 	
 	OraSaver( primitives, frames ).save( name + ".cgcompress", "webp" );
 	return frames;
