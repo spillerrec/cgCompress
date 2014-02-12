@@ -47,18 +47,56 @@ int hue( QRgb color ){
 		hue += 360;
 	return hue;
 }
-
-QImage make_histogram( QImage image, int f(QRgb), int width=256 ){
-	QImage output( width, 300, QImage::Format_RGB32 );
-	output.fill( qRgb( 255,255,255 ) );
+int saturation( QRgb color ){
+	int min = std::min( qRed(color), std::min( qGreen(color), qBlue(color) ) );
+	int max = std::max( qRed(color), std::max( qGreen(color), qBlue(color) ) );
 	
+	int delta = max - min;
+	if( delta == 0 )
+		return 0; //TODO: something!
+	
+	return delta  / (double)max * 255;
+}
+
+std::vector<int> calculate_histogram( QImage image, int f(QRgb), int width=256 ){
 	std::vector<int> histo( width, 0 );
 	for( int iy=0; iy<image.height(); iy++ ){
 		const QRgb* input = (const QRgb*)image.constScanLine( iy );
 		for( int ix=0; ix<image.width(); ix++ )
 			histo[ f( input[ix] ) ]++;
 	}
+	return histo;
+}
+
+int change_add( int org, int change ){
+	return org + change;
+}
+int change_max( int org, int change ){
+	return std::max( org, change );
+}
+int change_min( int org, int change ){
+	return std::min( org, change );
+}
+
+std::vector<int> calculate_changes( QImage input, QImage output, int f(QRgb), int width=256, int transfer(int,int)=&change_add ){
+	if( input.size() != output.size() )
+		qFatal( "Images do not have the same dimensions!" );
+		
+	std::vector<int> changes( width, 0 );
+	for( int iy=0; iy<input.height(); iy++ ){
+		const QRgb* in = (const QRgb*)input.constScanLine( iy );
+		const QRgb* out = (const QRgb*)output.constScanLine( iy );
+		for( int ix=0; ix<input.width(); ix++ )
+			changes[ f( in[ix] ) ] = transfer( changes[ f( in[ix] ) ], f( in[ix] ) - f( out[ix] ) );
+	}
+	return changes;
+}
+
+QImage make_histogram( QImage image, int f(QRgb), int width=256 ){
+	QImage output( width, 300, QImage::Format_RGB32 );
+	output.fill( qRgb( 255,255,255 ) );
 	
+	std::vector<int> histo( calculate_histogram( image, f, width ) );
 	double maximum = *std::max_element( histo.begin(), histo.end() );
 	
 	for( int ix=0; ix<width; ix++ ){
@@ -74,21 +112,13 @@ QImage make_histogram3( QImage image, int r(QRgb), int g(QRgb), int b(QRgb), int
 	QImage output( width, 300, QImage::Format_RGB32 );
 	output.fill( qRgb( 0,0,0 ) );
 	
-	std::vector<int> histo_r( width, 0 );
-	std::vector<int> histo_g( width, 0 );
-	std::vector<int> histo_b( width, 0 );
-	for( int iy=0; iy<image.height(); iy++ ){
-		const QRgb* input = (const QRgb*)image.constScanLine( iy );
-		for( int ix=0; ix<image.width(); ix++ ){
-			histo_r[ r( input[ix] ) ]++;
-			histo_g[ g( input[ix] ) ]++;
-			histo_b[ b( input[ix] ) ]++;
-		}
-	}
+	std::vector<int> histo_r( calculate_histogram( image, r, width ) );
+	std::vector<int> histo_g( calculate_histogram( image, g, width ) );
+	std::vector<int> histo_b( calculate_histogram( image, b, width ) );
 	
-	double maximum_r = *std::max_element( histo_r.begin(), histo_r.end() );
-	double maximum_g = *std::max_element( histo_g.begin(), histo_g.end() );
-	double maximum_b = *std::max_element( histo_b.begin(), histo_b.end() );
+	auto maximum_r = *std::max_element( histo_r.begin(), histo_r.end() );
+	auto maximum_g = *std::max_element( histo_g.begin(), histo_g.end() );
+	auto maximum_b = *std::max_element( histo_b.begin(), histo_b.end() );
 	double maximum = std::max( maximum_r, std::max( maximum_g, maximum_b ) );
 	
 	for( int ix=0; ix<width; ix++ ){
@@ -107,6 +137,33 @@ QImage make_histogram3( QImage image, int r(QRgb), int g(QRgb), int b(QRgb), int
 	
 	return output;
 }
+
+QImage make_changes( QImage original, QImage transformed, int f(QRgb), int width=256 ){
+	auto histo = calculate_histogram( original, f, width );
+	auto changes = calculate_changes( original, transformed, f, width );
+	auto mins = calculate_changes( original, transformed, f, width, &change_min );
+	auto maxs = calculate_changes( original, transformed, f, width, &change_max );
+	auto maximum = *std::max_element( histo.begin(), histo.end() );
+	
+	QImage output( width, width*2, QImage::Format_RGB32 );
+	output.fill( qRgb( 255,255,255 ) );
+	
+	for( int ix=0; ix<width; ix++ )
+		output.setPixel( ix, width, qRgb( 127,127,127 ) );
+	
+	for( int ix=0; ix<width; ix++ ){
+		if( histo[ix] != 0 ){
+			int change = width + changes[ix] / histo[ix];
+			int value = 0;//255 - 255.0 * histo[ix] / maximum;
+			output.setPixel( ix, change, qRgb( value, value, value ) );
+			output.setPixel( ix, width + mins[ix], qRgb( 127, 127, 127 ) );
+			output.setPixel( ix, width + maxs[ix], qRgb( 127, 127, 127 ) );
+		}
+	}
+	
+	return output;
+}
+	
 
 void test_consistency( QImage image, QImage transformed ){
 
@@ -251,6 +308,13 @@ int main( int argc, char* argv[] ){
 	
 //	test_consistency( image, transformed );
 	output_diff( image, transformed );
+	
+	make_changes( image, transformed, &qGray ).save( "change-gray.png" );
+	make_changes( image, transformed, &saturation ).save( "change-saturation.png" );
+	make_changes( image, transformed, &qRed ).save( "change-red.png" );
+	make_changes( image, transformed, &qGreen ).save( "change-green.png" );
+	make_changes( image, transformed, &qBlue ).save( "change-blue.png" );
+	make_changes( image, transformed, &hue, 360 ).save( "change-hue.png" );
 	
 	make_histogram( image, &hue, 360 ).save( "hue-image.png" );
 	make_histogram( image, &qGray ).save( "gray-image.png" );
