@@ -17,11 +17,13 @@
 
 #include "FileUtils.hpp"
 
-#include <QDir>
 #include <QFileInfo>
 #include <QImageReader>
+#include <QFile>
 
 #include <qDebug>
+
+#include "OraSaver.hpp"
 
 /** Extracts the images in a cgcompress files to a directory with the same
  *  name. Directory must not exist beforehand.
@@ -60,6 +62,55 @@ void extract_cgcompress( QString filename, Format format ){
 	}
 }
 
-void pack_directory( QString path ){
+/** Add all files in a sub-directory to files. File name will be "sub_dir/filename".
+ *  
+ *  \param [in,out] files All files will be added in this list
+ *  \param [in] dir Root directory
+ *  \param [in] sub_dir Sub-directory containing the wanted files
+ */
+static void append_all_files( QList<std::pair<QString,QByteArray>>& files, QDir dir, QString sub_dir ){
+	auto data = QDir( dir.absolutePath() + "/" + sub_dir ).entryInfoList( QStringList() << "*.*", QDir::Files );
+	for( auto file : data ){
+		QFile file_data( file.absoluteFilePath() );
+		if( file_data.open( QIODevice::ReadOnly ) )
+			files.append( { sub_dir + "/" + file.fileName(), file_data.readAll() });
+		else
+			qWarning() << "Could not read file!" << file.filePath();
+	}
+}
+
+/** Re-zip an unpacked OpenRaster zip archive
+ *  
+ *  \param [in] dir Path to the directory
+ */
+void pack_directory( QDir dir ){
+	if( !dir.exists() ){
+		qWarning( "Path must be a directory!" );
+		return;
+	}
 	
+	//Get mimetype
+	QFile mime( dir.absolutePath() + "/mimetype" );
+	if( !mime.open( QIODevice::ReadOnly ) ){
+		qWarning( "mimetype missing" );
+		return;
+	}
+	QString mimetype = mime.readAll();
+	
+	//Get stack
+	QFile stack_file( dir.absolutePath() + "/stack.xml" );
+	if( !stack_file.open( QIODevice::ReadOnly ) ){
+		qWarning( "stack.xml missing" );
+		return;
+	}
+	QString stack = stack_file.readAll();
+	
+	//Get thumbnail
+	QList<std::pair<QString,QByteArray>> files;
+	append_all_files( files, dir, "Thumbnails" );
+	
+	//Get data files
+	append_all_files( files, dir, "data" );
+	
+	OraSaver::save( dir.dirName() + ".packed.cgcompress", mimetype, stack, files );
 }

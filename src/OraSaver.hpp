@@ -22,6 +22,8 @@
 #include "Image.hpp"
 #include "Frame.hpp"
 
+#include <utility>
+
 class OraSaver {
 	private:
 		QList<Image> primitives;
@@ -33,6 +35,8 @@ class OraSaver {
 		OraSaver( QList<Image> images );
 		
 		void save( QString path, Format format ) const;
+		
+		static void save( QString path, QString mimetype, QString stack, QList<std::pair<QString,QByteArray>> files );
 };
 
 #endif

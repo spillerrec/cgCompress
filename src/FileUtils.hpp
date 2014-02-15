@@ -19,12 +19,13 @@
 #define FILE_UTILS_HPP
 
 #include <QString>
+#include <QDir>
 
 #include "Format.hpp"
 
 void extract_cgcompress( QString filename, Format format );
 
-void pack_directory( QString path );
+void pack_directory( QDir dir );
 
 #endif
 

@@ -111,23 +111,43 @@ bool addFileInfo( zipFile &zf, QFileInfo file ){
 	return zipCloseFileInZip( zf ) == ZIP_OK;;
 }
 
+/** Saves a zip compressed archive in the OpenRaster style.
+ *  
+ *  \param [in] path File path for output file
+ *  \param [in] mimetype The contents of "mimetype" which will be STORED
+ *  \param [in] stack The contents of "stack.xml"
+ *  \param [in] files File names and contents of the files
+ */
+void OraSaver::save( QString path, QString mimetype, QString stack, QList<std::pair<QString,QByteArray>> files ){
+	//TODO: make wrapper class for zipFile
+	zipFile zf = zipOpen64( path.toLocal8Bit().constData(), 0 );
+	
+	//Save mimetype without compression
+	addStringFile( zf, "mimetype", mimetype );
+	
+	//Save stack with compression
+	addStringFile( zf, "stack.xml", stack, true );
+	
+	//Save all data files
+	for( auto file : files )
+		addByteArray( zf, file.first, file.second );
+		//TODO: compress if there are significant savings. Perhaps user defined threshold?
+	
+	zipClose( zf, NULL );
+}
+
 void OraSaver::save( QString path, Format format ) const{
 	if( frames.isEmpty() ){
-		qDebug( "OraSaver: no frames to save!" );
+		qWarning( "OraSaver: no frames to save!" );
 		return;
 	}
 	
-	//Open zip
-	zipFile zf = zipOpen64( path.toLocal8Bit().constData(), 0 );
+	QList<std::pair<QString,QByteArray>> files;
 	
-	//TODO: save mimetype
-	addStringFile( zf, "mimetype", QString( "image/openraster" ) );
-	
-	//* Thumbnail
+	// Thumbnail
 	Image thumb = frames.first().reconstruct().resize( 256 );
 	Format lossy = format.get_lossy();
-	addByteArray( zf, lossy.filename("Thumbnails/thumbnail"), thumb.to_byte_array( lossy ) );
-	//*/
+	files.append( { lossy.filename("Thumbnails/thumbnail"), thumb.to_byte_array( lossy ) } );
 	
 	//Find used primitives
 	QList<int> used;
@@ -138,15 +158,13 @@ void OraSaver::save( QString path, Format format ) const{
 	
 	for( auto layer : used ){
 		QString name = QString( "data/%1.%2" ).arg( layer ).arg( format.ext() );
-		//TODO: compress if there are significant savings. Perhaps user defined threshold?
-		addByteArray( zf, name, primitives[layer].to_byte_array( format ) );
+		files.append( { name, primitives[layer].to_byte_array( format ) } );
 	}
 	
-	//TODO: stack
+	//Create stack
 	QString stack( "<?xml version='1.0' encoding='UTF-8'?>\n" );
 	stack += QString( "<image w=\"%1\" h=\"%2\">" ).arg( primitives[0].qimg().width() ).arg( primitives[0].qimg().height() );
 	
-	//	stack += "<stack>";
 	for( auto frame : frames ){
 		stack += "<stack>";
 		
@@ -158,12 +176,9 @@ void OraSaver::save( QString path, Format format ) const{
 		
 		stack += "</stack>";
 	}
-	//	stack += "</stack>";
 	
 	stack += "</image>";
 	
-	//TODO: compress this
-	addStringFile( zf, "stack.xml", stack, true );
-	
-	zipClose( zf, NULL );
+	//Save zip archive
+	save( path, "image/openraster", stack, files );
 }

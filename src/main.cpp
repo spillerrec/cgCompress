@@ -94,7 +94,8 @@ int main( int argc, char* argv[] ){
 		return 0;
 	}
 	else if( options.contains( "--pack" ) ){
-		cout << "Unimplemented";
+		for( auto file : files )
+			pack_directory( file );
 		return 0;
 	}
 	else if( options.contains( "--extract" ) ){
