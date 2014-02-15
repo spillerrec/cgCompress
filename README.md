@@ -57,6 +57,7 @@ I have made a Windows thumbnailer for support in Windows (file) explorer, but it
 - C++11 compiler support
 - qmake (for building)
 - zlib
+- Boost (headers only)
 
 *Recommended*:
 
