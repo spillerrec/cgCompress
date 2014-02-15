@@ -11,20 +11,22 @@ General usage:
 ```cgCompress [options] [files]```
 
 ### Option - modifiers
-```--format=XXX```
+
+``` --format=XXX```
 Changes the image compression format. Replace XXX with the file extension of the wanted format, e.g. "png".
 
 ### Option - operations
-```--help```
+
+``` --help```
 Display quick help and exit
 
-```--extract```
+``` --extract```
 Extract the images in cgCompress files to their original state. Use *--format* to change output file format. Currently requires qt5-cgcompress-plugin to be installed.
 
-```--recompress```
+``` --recompress```
 Extract and recompress cgCompress files. Useful for optimizing files which were created in an older version of cgCompress. Currently requires qt5-cgcompress-plugin to be installed.
 
-```--pack```
+``` --pack```
 Create a cgCompress file from a directory containing an un-zipped cgCompress file. OpenRaster sets some requirements on the structure of the zip archive such as file order and compression settings, use this option to get it correct.
 
 ## Status
