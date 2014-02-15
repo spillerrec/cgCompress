@@ -22,6 +22,7 @@
 
 #include "Format.hpp"
 #include "MultiImage.hpp"
+#include "FileUtils.hpp"
 
 #include <iostream>
 using namespace std;
@@ -97,7 +98,8 @@ int main( int argc, char* argv[] ){
 		return 0;
 	}
 	else if( options.contains( "--extract" ) ){
-		cout << "Unimplemented";
+		for( auto file : files )
+			extract_cgcompress( file, format );
 		return 0;
 	}
 	else{
