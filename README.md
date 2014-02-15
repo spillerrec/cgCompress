@@ -5,6 +5,28 @@ Efficiently store Visual Novel cgs by using a multi-image format for storing all
 cgCompress is an attempt to automatize this process, and reduce file size as much as possible by optimizing the configuration of differences.
 *NOTE*: This will only work well when lossless compressed images are used as source, as lossy compression will add artefacts which are not necessarily consistent from image to image.
 
+## Usage
+
+General usage:
+```cgCompress [options] [files]```
+
+### Option - modifiers
+```--format=XXX```
+Changes the image compression format. Replace XXX with the file extension of the wanted format, e.g. "png".
+
+### Option - operations
+```--help```
+Display quick help and exit
+
+```--extract```
+Extract the images in cgCompress files to their original state. Use *--format* to change output file format. Currently requires qt5-cgcompress-plugin to be installed.
+
+```--recompress```
+Extract and recompress cgCompress files. Useful for optimizing files which were created in an older version of cgCompress. Currently requires qt5-cgcompress-plugin to be installed.
+
+```--pack```
+Create a cgCompress file from a directory containing an un-zipped cgCompress file. OpenRaster sets some requirements on the structure of the zip archive such as file order and compression settings, use this option to get it correct.
+
 ## Status
 
 - Prof of concept
@@ -13,7 +35,6 @@ cgCompress is an attempt to automatize this process, and reduce file size as muc
 - Some images contain the same image, but with color changes. Some success have been had with alternative composite methods, but still needs to be further investigated.
 - The input images must currently not contain alpha, which means we can't optimize character sprites. Make it work!
 - Check if the reconstructed images are correct. Lossless is 100%, not 99.999% because of programmer stupidity.
-- A proper interface also needs to be made
 
 ## Output format
 
