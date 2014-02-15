@@ -28,11 +28,11 @@ int Image::compressed_size( const char* format ) const{
 	return to_byte_array( format ).size();
 }
 
-QByteArray Image::to_byte_array( const char* format, int quality ) const{
+QByteArray Image::to_byte_array( Format format ) const{
 	QByteArray data;
 	QBuffer buffer( &data );
 	buffer.open( QIODevice::WriteOnly );
-	img.save( &buffer, format, quality );
+	img.save( &buffer, format, format.get_quality() );
 	return data;
 }
 

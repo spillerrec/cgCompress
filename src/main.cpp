@@ -18,16 +18,20 @@
 #include <QCoreApplication>
 #include <QStringList>
 #include <QFileInfo>
+#include <QImageReader>
 
+#include "Format.hpp"
 #include "MultiImage.hpp"
 
 #include <iostream>
 using namespace std;
 
+/** Print version number to stdout */
 void print_version(){
 	cout << "cgCompress - version 0.0.1 (pre-alpha)" << endl;
 }
 
+/** Print usage info to stdout */
 void print_help(){
 	cout << "Usage:" << endl;
 	cout << "cgCompress [options] [files]" << endl;
@@ -40,14 +44,29 @@ void print_help(){
 	cout << "\t" << "--version      Show program version" << endl;
 }
 
-QString get_format( QStringList options ){
-	QString default_format = "PNG";
-	//TODO: set WebP as default, and fall back to PNG if missing plug-in
+/** Retrieve format from input arguments in the form "--format=XXX".
+ *  
+ *  \param [in] options Arguments supplied to program
+ *  \return Format XXX, default if not supplied
+ */
+Format get_format( QStringList options ){
+	auto supported = QImageReader::supportedImageFormats();
+	
+	//Check for user-defined format
 	for( auto opt : options )
 		if( opt.startsWith( "--format=" ) ){
-			return opt.right( opt.size() - 9 );
+			QString format = opt.right( opt.size() - 9 ).toLower();
+			if( supported.contains( format.toLocal8Bit() ) )
+				return format;
+			else{
+				qWarning( "Format '%s' not supported, using default", format.toLocal8Bit().constData() );
+				break;
+			}
 		}
-	return default_format;
+	
+	//Use webp as default if available, otherwise use png
+	return supported.contains( "webp" )
+		?	"webp" : "png";
 }
 
 int main( int argc, char* argv[] ){
@@ -62,6 +81,8 @@ int main( int argc, char* argv[] ){
 			options << arg;
 		else
 			files << arg;
+	
+	Format format = get_format( options );
 	
 	if( options.contains( "--help" ) ){
 		print_help();
@@ -80,8 +101,8 @@ int main( int argc, char* argv[] ){
 		return 0;
 	}
 	else{
-		if( args.size() < 2 ){
-			if( args.size() == 0 )
+		if( files.size() < 2 ){
+			if( files.size() == 0 )
 				print_help();
 			else
 				cout << "Needs at least two files in order to compress";
@@ -89,10 +110,12 @@ int main( int argc, char* argv[] ){
 		}
 		
 		MultiImage multi_img;
-		for( auto arg : args )
-			multi_img.append( Image( arg ) );
+		for( auto file : files )
+			multi_img.append( Image( file ) );
+			
+		multi_img.set_format( format );
 		
-		auto frames = multi_img.optimize2( QFileInfo(args[0]).baseName() );
+		auto frames = multi_img.optimize2( QFileInfo(files[0]).baseName() );
 		
 		//TODO: save frames
 		

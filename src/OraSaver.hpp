@@ -18,6 +18,7 @@
 #ifndef ORA_SAVER_HPP
 #define ORA_SAVER_HPP
 
+#include "Format.hpp"
 #include "Image.hpp"
 #include "Frame.hpp"
 
@@ -31,7 +32,7 @@ class OraSaver {
 			:	primitives(primitives), frames(frames) { }
 		OraSaver( QList<Image> images );
 		
-		void save( QString path, const char* format ) const;
+		void save( QString path, Format format ) const;
 };
 
 #endif

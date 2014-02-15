@@ -111,7 +111,7 @@ bool addFileInfo( zipFile &zf, QFileInfo file ){
 	return zipCloseFileInZip( zf ) == ZIP_OK;;
 }
 
-void OraSaver::save( QString path, const char* format ) const{
+void OraSaver::save( QString path, Format format ) const{
 	if( frames.isEmpty() ){
 		qDebug( "OraSaver: no frames to save!" );
 		return;
@@ -125,7 +125,8 @@ void OraSaver::save( QString path, const char* format ) const{
 	
 	//* Thumbnail
 	Image thumb = frames.first().reconstruct().resize( 256 );
-	addByteArray( zf, "Thumbnails/thumbnail.webp", thumb.to_byte_array( "webp", 95 ) );
+	Format lossy = format.get_lossy();
+	addByteArray( zf, lossy.filename("Thumbnails/thumbnail"), thumb.to_byte_array( lossy ) );
 	//*/
 	
 	//Find used primitives
@@ -136,7 +137,8 @@ void OraSaver::save( QString path, const char* format ) const{
 				used.append( layer );
 	
 	for( auto layer : used ){
-		QString name = QString( "data/%1.%2" ).arg( layer ).arg( format );
+		QString name = QString( "data/%1.%2" ).arg( layer ).arg( format.ext() );
+		//TODO: compress if there are significant savings. Perhaps user defined threshold?
 		addByteArray( zf, name, primitives[layer].to_byte_array( format ) );
 	}
 	
@@ -149,7 +151,7 @@ void OraSaver::save( QString path, const char* format ) const{
 		stack += "<stack>";
 		
 		for( auto layer : boost::adaptors::reverse(frame.layers) ){
-			QString name = QString( "data/%1.%2" ).arg( layer ).arg( format );
+			QString name = QString( "data/%1.%2" ).arg( layer ).arg( format.ext() );
 			stack += QString( "<layer name=\"%1\" src=\"%1\" x=\"%2\" y=\"%3\" />" )
 				.arg( name ).arg( primitives[layer].get_pos().x() ).arg( primitives[layer].get_pos().y() );
 		}

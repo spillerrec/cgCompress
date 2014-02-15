@@ -144,7 +144,7 @@ QList<Frame> MultiImage::optimize( QString name ) const{
 	//*/
 		
 	for( int i=0; i<sub_images.size(); i++ )
-		sub_images[i].save( QString( "%1.png" ).arg( i ) );
+		sub_images[i].save( QString( "%1" ).arg( i ), Format( "png" ) );
 	
 	//Remove duplicates and auto-crop
 	sub_images = remove_duplicates( sub_images );
@@ -182,7 +182,7 @@ QList<Frame> MultiImage::optimize( QString name ) const{
 	//Calculate file sizes
 	QList<int> sizes;
 	for( auto sub : sub_images )
-		sizes.append( sub.compressed_size( "webp" ) );
+		sizes.append( sub.compressed_size( format ) );
 	qDebug( "File sizes:" );
 	for( auto size : sizes )
 		qDebug( "\t%d bytes", size );
@@ -192,7 +192,7 @@ QList<Frame> MultiImage::optimize( QString name ) const{
 	qDebug( "\nBest solution with size: %d bytes:", best.second );
 	for( auto frame : best.first )
 		frame.debug();
-	OraSaver( sub_images, best.first ).save( name + ".cgcompress", "webp" );
+	OraSaver( sub_images, best.first ).save( name + ".cgcompress", format );
 	return best.first;
 }
 
@@ -247,7 +247,7 @@ QList<Frame> MultiImage::optimize2( QString name ) const{
 	
 	QList<QByteArray> orgs_data;
 	for( auto org : originals )
-		orgs_data << org.to_byte_array( "webp" );
+		orgs_data << org.to_byte_array( format );
 	
 	int best_start = 0;
 	int filesize = INT_MAX;
@@ -298,7 +298,7 @@ QList<Frame> MultiImage::optimize2( QString name ) const{
 			
 			Image result = primitives[i].contain_both( primitives[j] );
 			if( result.is_valid() ){
-				result.save( QString( "contain %1 %2.png" ).arg( i ).arg( j ) );
+				result.save( QString( "contain %1 %2" ).arg( i ).arg( j ), Format( "png" ) );
 				
 				primitives[i] = result;
 				primitives[j] = Image( {0,0}, QImage() );
@@ -314,9 +314,9 @@ QList<Frame> MultiImage::optimize2( QString name ) const{
 	
 	for( int i=1; i<primitives.size(); i++ )
 		if( primitives[i].is_valid() )
-			primitives[i] = primitives[i].auto_crop()/*/.remove_transparent();/*/.optimize_filesize( "webp" );//*/
+			primitives[i] = primitives[i].auto_crop()/*/.remove_transparent();/*/.optimize_filesize( format );//*/
 	
-	OraSaver( primitives, frames ).save( name + ".cgcompress", "webp" );
+	OraSaver( primitives, frames ).save( name + ".cgcompress", format );
 	return frames;
 }
 

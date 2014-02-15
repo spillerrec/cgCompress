@@ -18,6 +18,7 @@
 #ifndef MULTI_IMAGE_HPP
 #define MULTI_IMAGE_HPP
 
+#include "Format.hpp"
 #include "Image.hpp"
 #include "Frame.hpp"
 
@@ -33,11 +34,14 @@ class MultiImage {
 		
 		static std::pair<QList<Frame>,int> lowest_cost( const QList<int>& costs, QList<QList<Frame>> all_frames, QList<int> used=QList<int>() );
 		
+		Format format;
+		
 	public:
 		MultiImage() { }
 		MultiImage( QList<Image> originals ) : originals(originals) { }
 		
 		void append( Image original ){ originals.append( original ); }
+		void set_format( Format format ){ this->format = format; }
 		
 		QList<Frame> optimize( QString name ) const;
 		QList<Frame> optimize2( QString name ) const;
