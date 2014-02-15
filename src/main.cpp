@@ -38,10 +38,11 @@ void print_help(){
 	cout << "cgCompress [options] [files]" << endl;
 	cout << endl;
 	cout << "Options:" << endl;
-	cout << "\t" << "--extract      Uncompress cgcompress files" << endl;
+	cout << "\t" << "--extract      Uncompress cgCompress files" << endl;
 	cout << "\t" << "--format=XXX   Use format XXX for compressing/extracting" << endl;
 	cout << "\t" << "--help         Show this help" << endl;
-	cout << "\t" << "--pack         Re-zip an unzipped cgcompress file" << endl;
+	cout << "\t" << "--pack         Re-zip an unzipped cgCompress file" << endl;
+	cout << "\t" << "--recompress   Extract and recompress a cgCompress file" << endl;
 	cout << "\t" << "--version      Show program version" << endl;
 }
 
@@ -101,6 +102,21 @@ int main( int argc, char* argv[] ){
 	else if( options.contains( "--extract" ) ){
 		for( auto file : files )
 			extract_cgcompress( file, format );
+		return 0;
+	}
+	else if( options.contains( "--recompress" ) ){
+		for( auto file : files ){
+			auto images = extract_files( file );
+			
+			MultiImage multi_img;
+			for( auto image : images )
+				multi_img.append( Image( {0,0}, image.second ) );
+				
+			multi_img.set_format( format );
+			
+			multi_img.optimize2( QFileInfo(file).baseName() + ".recompressed" );
+		}
+		
 		return 0;
 	}
 	else{

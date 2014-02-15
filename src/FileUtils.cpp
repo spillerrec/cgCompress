@@ -25,15 +25,40 @@
 
 #include "OraSaver.hpp"
 
-/** Extracts the images in a cgcompress files to a directory with the same
- *  name. Directory must not exist beforehand.
+/** Extracts the images in a cgCompress file.
  *  
  *  \todo Read the actual file instead of using the Qt image framework. This
  *  way we could use the names in the stack.xml for output names
  *  
- *  \param [in] filename File path to cgcompress file
+ *  \param [in] filename File path to cgCompress file
+ *  \return The images and the names of the images
+ */
+QList<std::pair<QString,QImage>> extract_files( QString filename ){
+	QList<std::pair<QString,QImage>> files;
+	QImageReader reader( filename, "cgcompress" );
+	
+	if( !reader.canRead() ){
+		if( !QImageReader::supportedImageFormats().contains( "cgcompress" ) )
+			qWarning( "Extracting requires the cgCompress plug-in to be installed!" );
+		else
+			qWarning( "Could not read cgCompress file" );
+		return files;
+	}
+	
+	QImage img;
+	
+	int i=0;
+	while( reader.read( &img ) )
+		files.append( { QString::number( i++ ), img } );
+	
+	return files;
+}
+
+/** Extracts the images in a cgCompress file to a directory with the same
+ *  name. Directory must not exist beforehand.
+ *  
+ *  \param [in] filename File path to cgCompress file
  *  \param [in] format The format for the extracted files
- *  \return Return_Description
  */
 void extract_cgcompress( QString filename, Format format ){
 	QFileInfo file( filename );
@@ -44,22 +69,8 @@ void extract_cgcompress( QString filename, Format format ){
 	}
 	current.cd( file.baseName() );
 	
-	QImageReader reader( filename, "cgcompress" );
-	
-	if( !reader.canRead() ){
-		if( !QImageReader::supportedImageFormats().contains( "cgcompress" ) )
-			qWarning( "Extracting requires the cgCompress plug-in to be installed!" );
-		else
-			qWarning( "Could not read cgcompress file" );
-		return;
-	}
-	
-	QImage img;
-	
-	int i=0;
-	while( reader.read( &img ) ){
-		img.save( current.absolutePath() + "/" + QString::number( i++ ) + "." + format.ext(), format, format.get_quality() );
-	}
+	for( auto file : extract_files( filename ) )
+		file.second.save( current.absolutePath() + "/" + file.first + "." + format.ext(), format, format.get_quality() );
 }
 
 /** Add all files in a sub-directory to files. File name will be "sub_dir/filename".

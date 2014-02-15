@@ -20,8 +20,11 @@
 
 #include <QString>
 #include <QDir>
+#include <QImage>
 
 #include "Format.hpp"
+
+QList<std::pair<QString,QImage>> extract_files( QString filename );
 
 void extract_cgcompress( QString filename, Format format );
 
