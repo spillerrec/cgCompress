@@ -8,3 +8,5 @@ Makefile
 Makefile.*
 debug
 release
+doxygen/latex
+doxygen/html
