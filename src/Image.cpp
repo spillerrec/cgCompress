@@ -24,16 +24,8 @@
 
 using namespace std;
 
-int Image::compressed_size( const char* format ) const{
+int Image::compressed_size( Format format ) const{
 	return to_byte_array( format ).size();
-}
-
-QByteArray Image::to_byte_array( Format format ) const{
-	QByteArray data;
-	QBuffer buffer( &data );
-	buffer.open( QIODevice::WriteOnly );
-	img.save( &buffer, format, format.get_quality() );
-	return data;
 }
 
 Image Image::resize( int size ) const{
@@ -331,7 +323,7 @@ RIGHT_BREAK:
 }
 
 
-Image Image::optimize_filesize( const char* format ) const{
+Image Image::optimize_filesize( Format format ) const{
 	//Start with the basic image
 	Image best = remove_transparent();
 	int best_size = best.compressed_size( format );

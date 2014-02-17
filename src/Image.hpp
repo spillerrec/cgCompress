@@ -36,8 +36,8 @@ class Image {
 		
 		QPoint get_pos() const{ return pos; }
 		QImage qimg() const{ return img; }
-		bool save( QString path, Format format ){ return img.save( path + format, nullptr, format.get_quality() ); }
-		QByteArray to_byte_array( Format format ) const;
+		bool save( QString path, Format format ) const{ return format.save( img, path ); }
+		QByteArray to_byte_array( Format format ) const{ return format.to_byte_array( img ); }
 		
 		bool overlaps( Image other ) const{
 			return QRect( pos, img.size() ).intersects( QRect( other.pos, other.img.size() ) );
@@ -57,7 +57,7 @@ class Image {
 		
 		Image contain_both( Image diff ) const;
 		
-		int compressed_size( const char* format ) const;
+		int compressed_size( Format format ) const;
 		Image difference( Image img ) const;
 		Image remove_area( Image img ) const;
 		bool reduces_difference( Image original, Image diff ) const;
@@ -65,7 +65,7 @@ class Image {
 		Image remove_transparent() const;
 		Image auto_crop() const;
 		
-		Image optimize_filesize( const char* format ) const;
+		Image optimize_filesize( Format format ) const;
 		
 		bool operator==( const Image& other ) const{
 			return pos == other.pos && img == other.img;

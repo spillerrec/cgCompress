@@ -18,14 +18,16 @@
 #ifndef FORMAT_HPP
 #define FORMAT_HPP
 
+#include <QImage>
 #include <QString>
 #include <QByteArray>
+#include <QBuffer>
 
 /** Handles format and quality settings for image formats. */
 class Format {
 	private:
-		QByteArray format;
-		int quality{ 100 };
+		QByteArray format{ "png" }; ///file extension compatible with Qt format
+		int quality{ 100 }; ///Compression quality when saving
 		
 	public:
 		Format() { }
@@ -34,8 +36,14 @@ class Format {
 		Format( const char* format ) : format(format) { }
 		Format( QString format ) : format( format.toLocal8Bit() ) { }
 		
+		/** Compression quality
+		 *  \return quality
+		 */
 		int get_quality() const{ return (format=="png") ? -1 : quality; }
 		
+		/** Lossy version of this format
+		 *  \return Format with lossy compression
+		 */
 		Format get_lossy(){
 			if( format=="webp" )
 				return Format( format, 95 );
@@ -43,12 +51,39 @@ class Format {
 				return Format( "jpg", 95 );
 		}
 		
+		/** Create filename with a compatible extension
+		 *  \param [in] name Name of the file
+		 *  \return Name with extension
+		 */
 		QString filename( QString name ) const{
 			return name + "." + format;
 		}
 		
+		/** Save image to the file system compressed
+		 *  
+		 *  \param [in] img Image to save
+		 *  \param [in] path File system path, without extension
+		 *  \return true on sucess
+		 */
+		bool save( QImage img, QString path ) const{
+			return img.save( filename(path), ext(), get_quality() );
+		}
+		
+		/** Compress image to a memory buffer
+		 *  
+		 *  \param [in] img Image to save
+		 *  \return buffer containing the compressed image
+		 */
+		QByteArray to_byte_array( QImage img ) const{
+			QByteArray data;
+			QBuffer buffer( &data );
+			buffer.open( QIODevice::WriteOnly );
+			img.save( &buffer, ext(), get_quality() );
+			return data;
+		}
+
+		
 		const char* ext() const{ return format.constData(); }
-		operator const char*() const{ return ext(); }
 };
 
 #endif
