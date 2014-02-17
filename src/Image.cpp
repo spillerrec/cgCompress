@@ -24,10 +24,6 @@
 
 using namespace std;
 
-int Image::compressed_size( Format format ) const{
-	return to_byte_array( format ).size();
-}
-
 Image Image::resize( int size ) const{
 	size = min( size, img.width() );
 	size = min( size, img.height() );
@@ -324,15 +320,17 @@ RIGHT_BREAK:
 
 
 Image Image::optimize_filesize( Format format ) const{
+	//TODO: skip images with no transparency
+	
 	//Start with the basic image
 	Image best = remove_transparent();
-	int best_size = best.compressed_size( format );
+	int best_size = best.compressed_size( format, Format::MEDIUM );
 	int original_size = best_size;
 	
 	for( int i=0; i<7; i++ )
 		for( int j=0; j<i*i; j++ ){
 			Image current = clean_alpha( i, j ).remove_transparent();
-			int size = current.compressed_size( format );
+			int size = current.compressed_size( format, Format::MEDIUM );
 			if( size < best_size ){
 				best_size = size;
 				best = current;

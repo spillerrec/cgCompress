@@ -21,7 +21,6 @@
 #include <QImage>
 #include <QString>
 #include <QByteArray>
-#include <QBuffer>
 
 /** Handles format and quality settings for image formats. */
 class Format {
@@ -36,14 +35,10 @@ class Format {
 		Format( const char* format ) : format(format) { }
 		Format( QString format ) : format( format.toLocal8Bit() ) { }
 		
-		/** Compression quality
-		 *  \return quality
-		 */
+		/** \return Compression quality */
 		int get_quality() const{ return (format=="png") ? -1 : quality; }
 		
-		/** Lossy version of this format
-		 *  \return Format with lossy compression
-		 */
+		/** \return Copy with lossy compression */
 		Format get_lossy(){
 			if( format=="webp" )
 				return Format( format, 95 );
@@ -69,18 +64,14 @@ class Format {
 			return img.save( filename(path), ext(), get_quality() );
 		}
 		
-		/** Compress image to a memory buffer
-		 *  
-		 *  \param [in] img Image to save
-		 *  \return buffer containing the compressed image
-		 */
-		QByteArray to_byte_array( QImage img ) const{
-			QByteArray data;
-			QBuffer buffer( &data );
-			buffer.open( QIODevice::WriteOnly );
-			img.save( &buffer, ext(), get_quality() );
-			return data;
-		}
+		QByteArray to_byte_array( QImage img ) const;
+		
+		enum Precision{
+				HIGH
+			,	MEDIUM
+			,	LOW
+		};
+		int file_size( QImage img, Precision p=HIGH ) const;
 
 		
 		const char* ext() const{ return format.constData(); }

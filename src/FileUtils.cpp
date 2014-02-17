@@ -70,7 +70,7 @@ void extract_cgcompress( QString filename, Format format ){
 	current.cd( file.baseName() );
 	
 	for( auto file : extract_files( filename ) )
-		file.second.save( current.absolutePath() + "/" + file.first + "." + format.ext(), format, format.get_quality() );
+		format.save( file.second, current.absolutePath() + "/" + file.first );
 }
 
 /** Add all files in a sub-directory to files. File name will be "sub_dir/filename".

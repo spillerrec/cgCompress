@@ -57,7 +57,9 @@ class Image {
 		
 		Image contain_both( Image diff ) const;
 		
-		int compressed_size( Format format ) const;
+		int compressed_size( Format format, Format::Precision p=Format::HIGH ) const{
+			return format.file_size( img, p );
+		}
 		Image difference( Image img ) const;
 		Image remove_area( Image img ) const;
 		bool reduces_difference( Image original, Image diff ) const;
