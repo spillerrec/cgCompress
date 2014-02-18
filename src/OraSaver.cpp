@@ -20,6 +20,10 @@
 #include <QFileInfo>
 #include <QDateTime>
 
+/** Construct an unoptimized cgCompress file from a set of images.
+ *  
+ *  \param [in] images The images to form individual frames
+ */
 OraSaver::OraSaver( QList<Image> images ) : primitives( images ){
 	Frame frame( primitives );
 	for( int i=0; i<images.size(); i++ )
@@ -71,46 +75,6 @@ bool addStringFile( zipFile &zf, QString name, QString contents, bool compress=f
 	return addByteArray( zf, name, contents.toUtf8(), compress ? 9 : 0 );
 }
 
-bool addFileInfo( zipFile &zf, QFileInfo file ){
-	zip_fileinfo zi;
-
-	zi.dosDate = 0;
-	zi.internal_fa = 0;
-	zi.external_fa = 0;
-	
-	QDateTime time = file.lastModified().toTimeSpec( Qt::UTC );
-	setTime( zi.tmz_date, time.date(), time.time() );
-	
-	int compression = ( true ) ? 0 : Z_DEFLATED;
-	int compression_level = ( true ) ? 0 : Z_DEFAULT_COMPRESSION;
-	
-	//Start file
-	int err = zipOpenNewFileInZip3_64(
-			zf, file.fileName().toLocal8Bit().constData(), &zi
-		,	NULL, 0, NULL, 0, NULL // comment
-		,	compression, compression_level, 0
-		,	-MAX_WBITS, DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY
-		,	NULL, 0, 0  // password, crcFile, zip64);
-		);
-	
-	
-	qDebug( "Size of %s ", file.filePath().toLocal8Bit().constData() );
-	//Read file
-	QFile reader( file.filePath() );
-	if( !reader.open( QIODevice::ReadOnly ) )
-		return false; //close zipOpen... ?
-	QByteArray data = reader.readAll();
-	
-	qDebug( "Size of %s is %d", file.filePath().toLocal8Bit().constData(), data.size() );
-	
-	//Write file
-	zipWriteInFileInZip( zf, data.constData(), data.size() );
-	
-	//Finish file
-	reader.close();
-	return zipCloseFileInZip( zf ) == ZIP_OK;;
-}
-
 /** Saves a zip compressed archive in the OpenRaster style.
  *  
  *  \param [in] path File path for output file
@@ -136,6 +100,11 @@ void OraSaver::save( QString path, QString mimetype, QString stack, QList<std::p
 	zipClose( zf, NULL );
 }
 
+/** Save the current frames as a cgCompress file.
+ *  
+ *  \param [in] path File path for output file
+ *  \param [in] format Format for compressing the image files
+ */
 void OraSaver::save( QString path, Format format ) const{
 	if( frames.isEmpty() ){
 		qWarning( "OraSaver: no frames to save!" );

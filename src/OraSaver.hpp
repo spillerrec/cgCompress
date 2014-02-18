@@ -24,6 +24,11 @@
 
 #include <utility>
 
+/** Save images in a zip archive using the OpenRaster conventions.
+ *  This means, STORED mimetype file as the first file, stack.xml file
+ *  describing the image contents, a thumbnail in Thumbnails/thumbnail.*,
+ *  and data files in data/.
+ */
 class OraSaver {
 	private:
 		QList<Image> primitives;
