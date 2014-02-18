@@ -20,6 +20,9 @@
 #include "Converter.hpp"
 
 #include <climits>
+#include <iostream>
+
+#include <QDebug>
 
 //TODO: this is used in several places, find a fitting place to have this
 template<typename T>
@@ -213,9 +216,9 @@ void add_converter( QList<Converter>& used_converters, QList<QList<int>>& frames
 	int filesize = INT_MAX;
 	for( int i=0; i<converters.size(); i++ ){
 		if( has.contains( converters[i].get_from() ) && !used.contains( converters[i].get_to() ) )
-			if( converters[i].get_data().size() < filesize ){
+			if( converters[i].get_size() < filesize ){
 				best_converter = i;
-				filesize = converters[i].get_data().size();
+				filesize = converters[i].get_size();
 			}
 	}
 	if( best_converter == -1 )
@@ -235,14 +238,41 @@ void add_converter( QList<Converter>& used_converters, QList<QList<int>>& frames
 	add_converter( used_converters, frames, converters, amount );
 }
 
+class ProgressBar{
+	private:
+		int amount;
+		int size;
+		int count{ 0 };
+		int written{ 0 };
+		
+	public:
+		ProgressBar( int amount, int size ) : amount(amount), size(size){
+			for( int i=0; i<size; i++ )
+				std::cout << "_";
+			std::cout << std::endl;
+		}
+		~ProgressBar(){ std::cout << std::endl; }
+		
+		void update( int progress=1 ){
+			for( count += progress; written < count*size/amount; written++ )
+				std::cout << "X";
+		}
+};
 
 QList<Frame> MultiImage::optimize2( QString name ) const{
+	qDebug() << "Compressing " << name;
+	int base = originals.size() - 1;
+	
 	QList<Converter> converters;
-	for( int i=0; i<originals.size(); i++ )
-		for( int j=i+1; j<originals.size(); j++ ){
-			converters << Converter( originals, i, j );
-			converters << Converter( originals, j, i );
-		}
+	{	ProgressBar progress( base*base + base, 60 );
+		for( int i=0; i<originals.size(); i++ )
+			for( int j=i+1; j<originals.size(); j++ ){
+				converters << Converter( originals, i, j );
+				progress.update();
+				converters << Converter( originals, j, i );
+				progress.update();
+			}
+	}
 	qDebug( "%d converters made", converters.size() );
 	
 	QList<QByteArray> orgs_data;
@@ -298,8 +328,6 @@ QList<Frame> MultiImage::optimize2( QString name ) const{
 			
 			Image result = primitives[i].contain_both( primitives[j] );
 			if( result.is_valid() ){
-				result.save( QString( "contain %1 %2" ).arg( i ).arg( j ), Format( "png" ) );
-				
 				primitives[i] = result;
 				primitives[j] = Image( {0,0}, QImage() );
 				

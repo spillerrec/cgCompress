@@ -25,26 +25,27 @@
 #include <QList>
 #include <QByteArray>
 
+/** Describes a way to get from one image to another, and the file size cost.
+ *  \todo support multiple steps in the conversion
+ */
 class Converter {
 	private:
 		const QList<Image>& base_images;
 		int from;
 		int to;
-		Image primitive;
-		QByteArray data;
+		int size;
 		
 	public:
 		Converter( const QList<Image>& base_images, int from, int to )
 			:	base_images(base_images)
-			,	from(from), to(to)
-			,	primitive( base_images[from].difference( base_images[to] ) ) {
-				data = primitive.remove_transparent().auto_crop().to_byte_array( "webp" );
+			,	from(from), to(to) {
+				size = get_primitive().remove_transparent().auto_crop().to_byte_array( "webp" ).size(); //TODO: fix format
 			}
 			
 			int get_from() const{ return from; }
 			int get_to() const{ return to; }
-			QByteArray get_data() const{ return data; }
-			Image get_primitive() const{ return primitive; }
+			int get_size() const{ return size; }
+			Image get_primitive() const{ return base_images[from].difference( base_images[to] ); }
 		
 };
 
