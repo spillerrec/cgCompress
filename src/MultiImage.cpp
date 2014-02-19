@@ -21,6 +21,7 @@
 
 #include <climits>
 #include <iostream>
+#include <string>
 
 #include <QDebug>
 
@@ -246,7 +247,8 @@ class ProgressBar{
 		int written{ 0 };
 		
 	public:
-		ProgressBar( int amount, int size ) : amount(amount), size(size){
+		ProgressBar( std::string msg, int amount, int size ) : amount(amount), size(size){
+			std::cout << msg << std::endl;
 			for( int i=0; i<size; i++ )
 				std::cout << "_";
 			std::cout << std::endl;
@@ -264,7 +266,7 @@ QList<Frame> MultiImage::optimize2( QString name ) const{
 	int base = originals.size() - 1;
 	
 	QList<Converter> converters;
-	{	ProgressBar progress( base*base + base, 60 );
+	{	ProgressBar progress( "Generating data", base*base + base, 60 );
 		for( int i=0; i<originals.size(); i++ )
 			for( int j=i+1; j<originals.size(); j++ ){
 				converters << Converter( originals, i, j, format );
@@ -273,18 +275,21 @@ QList<Frame> MultiImage::optimize2( QString name ) const{
 				progress.update();
 			}
 	}
-	qDebug( "%d converters made", converters.size() );
 	
 	QList<QByteArray> orgs_data;
-	for( auto org : originals )
-		orgs_data << org.to_byte_array( format );
+	{	ProgressBar progress( "Finding best base image", originals.size(), 60 );
+		for( auto org : originals ){
+			orgs_data << org.to_byte_array( format );
+			progress.update();
+		}
+	}
 	
 	int best_start = 0;
 	int filesize = INT_MAX;
 	for( int i=0; i<orgs_data.size(); i++ ){
-		if( orgs_data.size() < filesize ){
+		if( orgs_data[i].size() < filesize ){
 			best_start = i;
-			filesize = orgs_data.size();
+			filesize = orgs_data[i].size();
 		}
 	}
 	qDebug( "Smallest image is: %d", best_start );
