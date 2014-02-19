@@ -39,6 +39,7 @@ void print_help(){
 	cout << endl;
 	cout << "Options:" << endl;
 	cout << "\t" << "--extract      Uncompress cgCompress files" << endl;
+	cout << "\t" << "--quality=X    0 provides best compression, higher values are faster but larger filesize" << endl;
 	cout << "\t" << "--format=XXX   Use format XXX for compressing/extracting" << endl;
 	cout << "\t" << "--help         Show this help" << endl;
 	cout << "\t" << "--pack         Re-zip an unzipped cgCompress file" << endl;
@@ -46,7 +47,23 @@ void print_help(){
 	cout << "\t" << "--version      Show program version" << endl;
 }
 
-/** Retrieve format from input arguments in the form "--format=XXX".
+/** Retrieves XXX from --name=XXX
+ *  
+ *  \param [in] options Arguments supplied to program
+ *  \param [in] name of the parameter, without "--" and "="
+ *  \return The value of XXX, or QString() if not found
+ */
+QString get_option_value( QStringList options, QString name ){
+	name = "--" + name + "=";
+	for( auto opt : options )
+		if( opt.startsWith( name ) )
+			return opt.right( opt.size() - name.size() );
+	return QString();
+}
+
+/** Retrieve format settings from the input arguments.
+ *  --format=XXX changes format
+ *  --quality=X changes quality of estimation
  *  
  *  \param [in] options Arguments supplied to program
  *  \return Format XXX, default if not supplied
@@ -54,21 +71,25 @@ void print_help(){
 Format get_format( QStringList options ){
 	auto supported = QImageReader::supportedImageFormats();
 	
-	//Check for user-defined format
-	for( auto opt : options )
-		if( opt.startsWith( "--format=" ) ){
-			QString format = opt.right( opt.size() - 9 ).toLower();
-			if( supported.contains( format.toLocal8Bit() ) )
-				return format;
-			else{
-				qWarning( "Format '%s' not supported, using default", format.toLocal8Bit().constData() );
-				break;
-			}
+	//Get quality
+	int level = get_option_value( options, "quality" ).toInt();
+	
+	//Get user-defined format
+	QString format = get_option_value( options, "format" ).toLower();
+	if( !format.isEmpty() ){
+		if( supported.contains( format.toLatin1() ) ){
+			Format f( format );
+			f.set_precision( level );
+			return f;
 		}
+		else
+			qWarning( "Format '%s' not supported, using default", format.toLocal8Bit().constData() );
+	}
 	
 	//Use webp as default if available, otherwise use png
-	return supported.contains( "webp" )
-		?	"webp" : "png";
+	Format f( supported.contains( "webp" ) ?	"webp" : "png" );
+	f.set_precision( level );
+	return f;
 }
 
 int main( int argc, char* argv[] ){

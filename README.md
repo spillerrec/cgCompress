@@ -14,6 +14,9 @@ cgCompress is an attempt to automatize this process, and reduce file size as muc
     --format=XXX
 Changes the image compression format. Replace XXX with the file extension of the wanted format, e.g. "png".
 
+    --quality=X
+Provides a file-size/compression-time trade-off. A value of 0 means maximum compression, while higher values will be faster, at the cost of potentially higher file-sizes. Currently 1 is the fastest value.
+
 ### Option - operations
 
     --help

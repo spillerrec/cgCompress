@@ -64,13 +64,8 @@ QByteArray Format::to_byte_array( QImage img ) const{
  *  \return The estimated file size
  */
 int Format::file_size( QImage img, Precision p ) const{
-	//TODO: use settings to lower precision
-	switch( p ){
-		case LOW: return image_gradient_sum( img );
-		case MEDIUM:
-		case HIGH:
-		default:
-			return to_byte_array( img ).size();
-	}
+	if( precision_level > 0 && p != HIGH )
+		return image_gradient_sum( img );
+	return to_byte_array( img ).size();
 }
 

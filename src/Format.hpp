@@ -27,6 +27,7 @@ class Format {
 	private:
 		QByteArray format{ "png" }; ///file extension compatible with Qt format
 		int quality{ 100 }; ///Compression quality when saving
+		int precision_level{ 0 };
 		
 	public:
 		Format() { }
@@ -34,6 +35,9 @@ class Format {
 		Format( QByteArray format, int quality ) : format(format), quality(quality) { }
 		Format( const char* format ) : format(format) { }
 		Format( QString format ) : format( format.toLocal8Bit() ) { }
+		
+		/** \param [in] quality New quality value, used when saving */
+		void set_quality( int quality ){ this->quality = quality; }
 		
 		/** \return Compression quality */
 		int get_quality() const{ return (format=="png") ? -1 : quality; }
@@ -45,6 +49,11 @@ class Format {
 			else
 				return Format( "jpg", 95 );
 		}
+		
+		/** Change precision/speed trade off.
+		 *  \param [in] level 0 == full precision, higher values makes it faster (1 == fastest, currently)
+		 */
+		void set_precision( int level ){ precision_level = level; }
 		
 		/** Create filename with a compatible extension
 		 *  \param [in] name Name of the file
