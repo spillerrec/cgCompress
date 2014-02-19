@@ -248,10 +248,20 @@ class ProgressBar{
 		
 	public:
 		ProgressBar( std::string msg, int amount, int size ) : amount(amount), size(size){
-			std::cout << msg << std::endl;
+			//Print slightly fancy header with centered text
+			msg += " (" + std::to_string( amount ) + ")";
+			int left = size - msg.size();
+			
 			for( int i=0; i<size; i++ )
 				std::cout << "_";
-			std::cout << std::endl;
+			
+			std::cout << std::endl << "|";
+			for( int i=1; i<left/2; i++ )
+				std::cout << " ";
+			std::cout << msg;
+			for( int i=1; i<left-left/2; i++ )
+				std::cout << " ";
+			std::cout << "|" << std::endl;
 		}
 		~ProgressBar(){ std::cout << std::endl; }
 		
@@ -277,22 +287,17 @@ QList<Frame> MultiImage::optimize2( QString name ) const{
 	}
 	
 	QList<QByteArray> orgs_data;
-	{	ProgressBar progress( "Finding best base image", originals.size(), 60 );
+	//TODO: if input format == output format, skip this
+	{	ProgressBar progress( "Compressing original images", originals.size(), 60 );
 		for( auto org : originals ){
 			orgs_data << org.to_byte_array( format );
 			progress.update();
 		}
 	}
 	
-	int best_start = 0;
-	int filesize = INT_MAX;
-	for( int i=0; i<orgs_data.size(); i++ ){
-		if( orgs_data[i].size() < filesize ){
-			best_start = i;
-			filesize = orgs_data[i].size();
-		}
-	}
-	qDebug( "Smallest image is: %d", best_start );
+	//Pick base image based on file-size
+	auto comp_size = [](QByteArray arr1, QByteArray arr2){ return arr1.size() < arr2.size(); };
+	int best_start = std::min_element(orgs_data.begin(), orgs_data.end(), comp_size) - orgs_data.begin();
 	
 	QList<QList<int>> combined;
 	QList<Converter> used_converters;
@@ -323,7 +328,7 @@ QList<Frame> MultiImage::optimize2( QString name ) const{
 		frames << f;
 	}
 	
-	//* Try to reuse planes if possible
+	// Try to reuse planes if possible
 	for( int i=0; i<primitives.size(); i++ ){
 		if( !primitives[i].is_valid() )
 			continue;
@@ -343,11 +348,12 @@ QList<Frame> MultiImage::optimize2( QString name ) const{
 			}
 		}
 	}
-	//*/
 	
-	for( int i=1; i<primitives.size(); i++ )
-		if( primitives[i].is_valid() )
-			primitives[i] = primitives[i].auto_crop()/*/.remove_transparent();/*/.optimize_filesize( format );//*/
+	{	ProgressBar progress( "Optimizing images", primitives.size()-1, 60 );
+		for( int i=1; i<primitives.size(); i++, progress.update() )
+			if( primitives[i].is_valid() )
+				primitives[i] = primitives[i].auto_crop().optimize_filesize( format );
+	}
 	
 	OraSaver( primitives, frames ).save( name + ".cgcompress", format );
 	return frames;
