@@ -36,10 +36,10 @@ class Converter {
 		int size;
 		
 	public:
-		Converter( const QList<Image>& base_images, int from, int to )
+		Converter( const QList<Image>& base_images, int from, int to, Format format )
 			:	base_images(base_images)
 			,	from(from), to(to) {
-				size = get_primitive().remove_transparent().auto_crop().to_byte_array( "webp" ).size(); //TODO: fix format
+				size = get_primitive().remove_transparent().auto_crop().compressed_size( format, Format::MEDIUM ); //TODO: fix format
 			}
 			
 			int get_from() const{ return from; }

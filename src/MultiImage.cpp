@@ -267,9 +267,9 @@ QList<Frame> MultiImage::optimize2( QString name ) const{
 	{	ProgressBar progress( base*base + base, 60 );
 		for( int i=0; i<originals.size(); i++ )
 			for( int j=i+1; j<originals.size(); j++ ){
-				converters << Converter( originals, i, j );
+				converters << Converter( originals, i, j, format );
 				progress.update();
-				converters << Converter( originals, j, i );
+				converters << Converter( originals, j, i, format );
 				progress.update();
 			}
 	}
