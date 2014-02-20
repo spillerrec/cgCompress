@@ -129,11 +129,9 @@ int main( int argc, char* argv[] ){
 		for( auto file : files ){
 			auto images = extract_files( file );
 			
-			MultiImage multi_img;
+			MultiImage multi_img( format );
 			for( auto image : images )
 				multi_img.append( Image( {0,0}, image.second ) );
-				
-			multi_img.set_format( format );
 			
 			multi_img.optimize( QFileInfo(file).baseName() + ".recompressed" );
 		}
@@ -149,15 +147,11 @@ int main( int argc, char* argv[] ){
 			return -1;
 		}
 		
-		MultiImage multi_img;
+		MultiImage multi_img( format );
 		for( auto file : files )
 			multi_img.append( Image( file ) );
-			
-		multi_img.set_format( format );
 		
-		auto frames = multi_img.optimize( QFileInfo(files[0]).baseName() );
-		
-		//TODO: save frames
+		multi_img.optimize( QFileInfo(files[0]).baseName() );
 		
 		return 0;
 	}

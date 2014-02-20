@@ -24,19 +24,24 @@
 
 #include <utility>
 
+/** Contains an image which is made up of many similar images */
 class MultiImage {
 	private:
-		QList<Image> originals;
 		Format format;
+		QList<Image> originals;
 		
 	public:
-		MultiImage() { }
-		MultiImage( QList<Image> originals ) : originals(originals) { }
+		/** Construct with images initialized
+		 *  \param [in] format The image format to use
+		 *  \param [in] originals The images which it is made of
+		 */
+		MultiImage( Format format, QList<Image> originals=QList<Image>() )
+			: format(format), originals(originals){ }
 		
+		/** \param [in] original Another image that it is made of */
 		void append( Image original ){ originals.append( original ); }
-		void set_format( Format format ){ this->format = format; }
 		
-		QList<Frame> optimize( QString name ) const;
+		bool optimize( QString name ) const;
 };
 
 #endif

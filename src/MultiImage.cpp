@@ -37,7 +37,14 @@ QList<T> remove_duplicates( QList<T> elements ){
 	return list;
 }
 
-
+/** Find a converter to a frame not found, will be called recursively to find
+ *  all frames.
+ *  \param [in,out] used_converters The converters found will be added to this
+ *  \param [in,out] frames The list of transformations to get the images. Each *                     transformation contains a the indexes of images to get
+ *                     to the final image.
+ *  \param [in] converters The available converters which may be used
+ *  \param [in] amount The total amount of frames
+ */
 void add_converter( QList<Converter>& used_converters, QList<QList<int>>& frames, const QList<Converter>& converters, int amount ){
 	if( amount == frames.size() )
 		return;
@@ -122,7 +129,11 @@ class ProgressBar{
 		}
 };
 
-QList<Frame> MultiImage::optimize( QString name ) const{
+/** Create an efficient composite version and save it to a cgCompress file.
+ *  \param [in] name File path for the output file, without the extension
+ *  \return true on success
+ */
+bool MultiImage::optimize( QString name ) const{
 	qDebug() << "Compressing " << name;
 	int base = originals.size() - 1;
 	
@@ -144,7 +155,7 @@ QList<Frame> MultiImage::optimize( QString name ) const{
 	
 	//Only do the first one, unless high precision have been selected
 	int test_amount = (format.get_precision() == 0) ? originals.size() : 1;
-	{	ProgressBar progress( "Finding efficient solution", test_amount, 60 );
+	{	ProgressBar progress( "Finding efficient solution", test_amount );
 		for( int best_start=0; best_start<test_amount; best_start++, progress.update() ){
 			QList<QList<int>> combined;
 			QList<Converter> used_converters;
@@ -211,13 +222,13 @@ QList<Frame> MultiImage::optimize( QString name ) const{
 		}
 	}
 	
-	{	ProgressBar progress( "Optimizing images", final_primitives.size()-1, 60 );
+	{	ProgressBar progress( "Optimizing images", final_primitives.size()-1 );
 		for( int i=1; i<final_primitives.size(); i++, progress.update() )
 			if( final_primitives[i].is_valid() )
 				final_primitives[i] = final_primitives[i].auto_crop().optimize_filesize( format );
 	}
 	
 	OraSaver( final_primitives, final_frames ).save( name + ".cgcompress", format );
-	return final_frames;
+	return true;
 }
 
