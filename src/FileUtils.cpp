@@ -21,7 +21,7 @@
 #include <QImageReader>
 #include <QFile>
 
-#include <qDebug>
+#include <QDebug>
 
 #include "OraSaver.hpp"
 
