@@ -30,10 +30,17 @@ class Format {
 		int precision_level{ 0 };
 		
 	public:
+		/** Everything set to default values */
 		Format() { }
-		Format( QByteArray format ) : format(format) { }
-		Format( QByteArray format, int quality ) : format(format), quality(quality) { }
+		
+		/** \param [in] format File extension which identifies the format
+		 *  \param [in] quality Compression quality when saving */
+		Format( QByteArray format, int quality=100 ) : format(format), quality(quality) { }
+		
+		/** \param [in] format File extension which identifies the format */
 		Format( const char* format ) : format(format) { }
+		
+		/** \param [in] format File extension which identifies the format */
 		Format( QString format ) : format( format.toLocal8Bit() ) { }
 		
 		/** \param [in] quality New quality value, used when saving */
@@ -78,6 +85,7 @@ class Format {
 		
 		QByteArray to_byte_array( QImage img ) const;
 		
+		/** The precision when calculating the file size */
 		enum Precision{
 				HIGH
 			,	MEDIUM
@@ -85,7 +93,7 @@ class Format {
 		};
 		int file_size( QImage img, Precision p=HIGH ) const;
 
-		
+		/** \return The file extension */
 		const char* ext() const{ return format.constData(); }
 };
 
