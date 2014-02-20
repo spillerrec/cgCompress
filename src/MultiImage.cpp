@@ -299,49 +299,6 @@ QList<Frame> MultiImage::optimize2( QString name ) const{
 			}
 	}
 	
-<<<<<<< HEAD
-	QList<QByteArray> orgs_data;
-	{	ProgressBar progress( "Finding best base image", originals.size() );
-		for( auto org : originals ){
-			orgs_data << org.to_byte_array( format );
-			progress.update();
-		}
-	}
-	
-	int best_start = 0;
-	int filesize = INT_MAX;
-	for( int i=0; i<orgs_data.size(); i++ ){
-		if( orgs_data[i].size() < filesize ){
-			best_start = i;
-			filesize = orgs_data[i].size();
-		}
-	}
-	qDebug( "Smallest image is: %d", best_start );
-	
-	QList<QList<int>> combined;
-	QList<Converter> used_converters;
-	combined << ( QList<int>() << best_start  );
-	
-	add_converter( used_converters, combined, converters, originals.size() );
-	qSort( combined.begin(), combined.end(), []( const QList<int>& first, const QList<int>& last ){ return first.last() < last.last(); } );
-	
-	QList<Image> primitives;
-	primitives << originals[best_start];
-	for( auto used : used_converters )
-		primitives.append( used.get_primitive() );
-	
-	QList<Frame> frames;
-	for( auto comb : combined ){
-		Frame f( primitives );
-		f.layers << 0;
-		for( int j=1; j<comb.size(); j++ ){
-			int from = f.layers.last();
-			from = (j == 1) ? best_start : comb[j-1];
-			for( int i=0; i<used_converters.size(); i++ ){
-				if( from == used_converters[i].get_from() && comb[j] == used_converters[i].get_to() ){
-					f.layers << i+1;
-					break;
-=======
 	//Try all originals as the base image, and pick the best one
 	int best_size = INT_MAX;
 	QList<Image> final_primitives;
@@ -403,7 +360,6 @@ QList<Frame> MultiImage::optimize2( QString name ) const{
 								if( layer == j )
 									layer = i;
 					}
->>>>>>> d770a887c252435180ac2cad2628125519847d11
 				}
 			}
 			
