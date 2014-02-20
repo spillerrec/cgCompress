@@ -24,20 +24,25 @@
 
 using namespace std;
 
+/** Create a resized version of this image, will keep aspect ratio
+ *  \param [in] size Maximum dimensions of the resized image
+ *  \return The resized image */
 Image Image::resize( int size ) const{
 	size = min( size, img.width() );
 	size = min( size, img.height() );
 	QImage scaled = img.scaled( size, size, Qt::KeepAspectRatio, Qt::SmoothTransformation );
-	return Image( pos, scaled );
+	return Image( {0,0}, scaled );
 }
 
-bool content_in_vertical_line( QImage img, int x ){
+static bool content_in_vertical_line( QImage img, int x ){
 	for( int iy=0; iy<img.height(); iy++ )
 		if( qAlpha( img.pixel(x,iy) ) != 0 )
 			return true;
 	return false;
 }
 
+/** Segment the image into several separate images, based on the alpha channel
+ *  \return List of images which can be combined to into this image */
 QList<Image> Image::segment() const{
 	QList<Image> images;
 	
@@ -69,6 +74,7 @@ QList<Image> Image::segment() const{
 	return images;
 }
 
+/** \return This image where all transparent pixels are set to #000000 */
 Image Image::remove_alpha() const{
 	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
 	
@@ -82,6 +88,9 @@ Image Image::remove_alpha() const{
 	return Image( pos, output );
 }
 
+/** Make the area the other image covers transparent (colors are kept).
+ *  \param [in] input The area to remove
+ *  \return The resulting image */
 Image Image::remove_area( Image input ) const{
 	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
 	
@@ -94,30 +103,20 @@ Image Image::remove_area( Image input ) const{
 	return Image( pos, output );
 }
 
+/** Segment based on how the images differs.
+ *  \todo explain this better
+ *  \param [in] diff The image used for differencing
+ *  \return The segmented images */
 QList<Image> Image::diff_segment( Image diff ) const{
 	if( !overlaps( diff ) )
 		return QList<Image>() << *this << diff;
 	
 	Image diff_diff = difference( diff );
 	Image diff_diff2 = diff.difference( *this );
-//	diff_diff.save( "diff diff.png" );
-//	diff_diff2.save( "diff diff2.png" );
 	
-	/*
-	remove_area( diff_diff.auto_crop() ).save( "this diff diff removed.png" );
-	remove_area( diff_diff2.auto_crop() ).save( "this diff diff2 removed.png" );
-	diff.remove_area( diff_diff.auto_crop() ).save( "diff diff diff removed.png" );
-	diff.remove_area( diff_diff2.auto_crop() ).save( "diff diff diff2 removed.png" );
-	//*/
-	//*
 	Image new_diff1 = remove_area( diff_diff.auto_crop() ).remove_area( diff_diff2.auto_crop() );
-//	new_diff1.save( "this diff diff removed.png" );
 	Image new_diff2 = diff.remove_area( diff_diff.auto_crop() ).remove_area( diff_diff2.auto_crop() );
-//	new_diff2.save( "diff diff diff removed.png" );
 	
-//	remove_area( new_diff2.auto_crop() ).save( "_test this.png" );
-//	diff.remove_area( new_diff1.auto_crop() ).save( "_test diff.png" );
-	//*/
 	
 	QList<Image> new_diffs;
 	new_diffs << new_diff1;
@@ -134,6 +133,9 @@ QList<Image> Image::diff_segment( Image diff ) const{
 	return new_diffs;
 }
 
+/** Paint another image on top of this one
+ *  \param [in] on_top Image to paint
+ *  \return The combined image */
 Image Image::combine( Image on_top ) const{
 	QPoint tl{ min( pos.x(), on_top.pos.x() ), min( pos.y(), on_top.pos.y() ) };
 	int width = max( pos.x()+img.width(), on_top.pos.x()+on_top.img.width() ) - tl.x();
@@ -148,6 +150,9 @@ Image Image::combine( Image on_top ) const{
 	return Image( tl, output );
 }
 
+/** The difference between the two images
+ *  \param [in] input The image to diff on, must have same dimensions
+ *  \return The difference */
 Image Image::difference( Image input ) const{
 	//TODO: images must be the same size and at same point
 	
@@ -171,6 +176,11 @@ Image Image::difference( Image input ) const{
 	return Image( {0,0}, output );
 }
 
+/** Checks if another image reduces the difference
+ *  \todo Is this used anymore?
+ *  \param [in] original The image wanted
+ *  \param [in] diff The additional image to reduce difference
+ *  \return true if *diff* reduces the difference */
 bool Image::reduces_difference( Image original, Image diff ) const{
 	//TODO: this and original must be larger than diff
 	int balance = 0;
@@ -208,6 +218,9 @@ static bool color_equal( QRgb c1, QRgb c2 ){
 		;
 }
 
+/** Try to reset alpha to find an image which can simulate both images
+ *  \param [in] input Another image
+ *  \return An image which contains both images, or an invalid image on failure */
 Image Image::contain_both( Image input ) const{
 	//TODO: images must be the same size and at same point
 	
@@ -233,6 +246,10 @@ Image Image::contain_both( Image input ) const{
 	return Image( {0,0}, output );
 }
 
+/** Dilate the alpha channel to reduce salt&pepper noise
+ *  \param [in] kernel_size How large area around each pixel should be considered
+ *  \param [in] threshold How many pixels in the area must be set to enable this pixel
+ *  \return The cleaned image */
 Image Image::clean_alpha( int kernel_size, int threshold ) const{
 	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
 	
@@ -266,6 +283,7 @@ Image Image::clean_alpha( int kernel_size, int threshold ) const{
 	return Image( pos, output );
 }
 
+/** \return This image where all transparent pixels are set to transparent black **/
 Image Image::remove_transparent() const{
 	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
 	
@@ -279,6 +297,7 @@ Image Image::remove_transparent() const{
 	return Image( pos, output );
 }
 
+/** \return This image, but with image data cropped to only contain non-transparent areas */
 Image Image::auto_crop() const{
 	int right=0, left=0;
 	int top=0, bottom=0;
@@ -318,7 +337,9 @@ RIGHT_BREAK:
 	return sub_image( left,top, img.width()-left-right, img.height()-top-bottom );
 }
 
-
+/** Minimize file size by cleaning the alpha, finds the best parameters
+ *  \param [in] format Format used for compression
+ *  \return Optimized image */
 Image Image::optimize_filesize( Format format ) const{
 	//TODO: skip images with no transparency
 	
