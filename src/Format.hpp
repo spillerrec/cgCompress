@@ -55,6 +55,9 @@ class Format {
 		 */
 		void set_precision( int level ){ precision_level = level; }
 		
+		/** \return Current precision level */
+		int get_precision() const{ return precision_level; }
+		
 		/** Create filename with a compatible extension
 		 *  \param [in] name Name of the file
 		 *  \return Name with extension

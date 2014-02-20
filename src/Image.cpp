@@ -337,7 +337,6 @@ Image Image::optimize_filesize( Format format ) const{
 			}
 		}
 	
-	qDebug( "Reduced: %f", (original_size-best_size) * 100.0 / original_size );
 	return best;
 }
 
