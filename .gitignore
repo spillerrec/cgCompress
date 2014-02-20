@@ -6,6 +6,7 @@ moc_*.cpp
 qrc_*.cpp
 Makefile
 Makefile.*
+object_script.*
 debug
 release
 doxygen/latex
