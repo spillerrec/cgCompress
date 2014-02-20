@@ -22,23 +22,16 @@
 
 #include <QList>
 
+/** A single frame in a multi image */
 class Frame {
 	public:
 		QList<Image> primitives;
 		QList<int> layers;
 		
+		/** \param [in] primitives The primitives used to build the frame */
 		Frame( QList<Image> primitives ) : primitives( primitives ) { }
 		
-		static QList<Frame> optimize_list( QList<Frame> list );
-		static QList<Frame> generate_frames( const QList<Image>& primitives, const Image& original, int start, const Frame& current, const Image& reconstructed, int depth = 0 );
-		
-	public:
 		Image reconstruct() const;
-		void debug() const;
-		
-		static QList<Frame> generate_frames( const QList<Image>& primitives, const Image& original, int start );
-		
-		bool operator==( const Frame& other ) const;
 };
 
 #endif
