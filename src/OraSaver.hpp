@@ -35,6 +35,8 @@ class OraSaver {
 		QList<Frame> frames;
 		
 	public:
+		/** \param [in] primitives The primitives that the frames need
+		 *  \param [in] frames All the frames to save */
 		OraSaver( QList<Image> primitives, QList<Frame> frames )
 			:	primitives(primitives), frames(frames) { }
 		OraSaver( QList<Image> images );

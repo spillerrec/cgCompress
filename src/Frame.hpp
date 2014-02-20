@@ -25,7 +25,10 @@
 /** A single frame in a multi image */
 class Frame {
 	public:
+		/// Images for reconstructing the original image
 		QList<Image> primitives;
+		
+		/// The indexes to primitives used for reconstructing
 		QList<int> layers;
 		
 		/** \param [in] primitives The primitives used to build the frame */
