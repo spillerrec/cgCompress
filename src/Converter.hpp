@@ -36,16 +36,28 @@ class Converter {
 		int size;
 		
 	public:
+		/** \param [in] base_images The images to convert on
+		 *  \param [in] from Index to the image to start on
+		 *  \param [in] to Index to the image to end on
+		 *  \param [in] format The format used for compressing
+		 */
 		Converter( const QList<Image>& base_images, int from, int to, Format format )
 			:	base_images(base_images)
 			,	from(from), to(to) {
 				size = get_primitive().remove_transparent().auto_crop().compressed_size( format, Format::MEDIUM ); //TODO: fix format
 			}
-			
-			int get_from() const{ return from; }
-			int get_to() const{ return to; }
-			int get_size() const{ return size; }
-			Image get_primitive() const{ return base_images[from].difference( base_images[to] ); }
+		
+		/** \return Index to the start image */
+		int get_from() const{ return from; }
+		
+		/** \return Index to the resulting image */
+		int get_to() const{ return to; }
+		
+		/** \return File size needed to store the conversion */
+		int get_size() const{ return size; }
+		
+		/** \return The image used for converting **/
+		Image get_primitive() const{ return base_images[from].difference( base_images[to] ); }
 		
 };
 
