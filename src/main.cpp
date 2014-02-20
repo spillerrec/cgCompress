@@ -135,7 +135,7 @@ int main( int argc, char* argv[] ){
 				
 			multi_img.set_format( format );
 			
-			multi_img.optimize2( QFileInfo(file).baseName() + ".recompressed" );
+			multi_img.optimize( QFileInfo(file).baseName() + ".recompressed" );
 		}
 		
 		return 0;
@@ -155,7 +155,7 @@ int main( int argc, char* argv[] ){
 			
 		multi_img.set_format( format );
 		
-		auto frames = multi_img.optimize2( QFileInfo(files[0]).baseName() );
+		auto frames = multi_img.optimize( QFileInfo(files[0]).baseName() );
 		
 		//TODO: save frames
 		

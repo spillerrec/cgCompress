@@ -27,13 +27,6 @@
 class MultiImage {
 	private:
 		QList<Image> originals;
-		
-		QList<Image> diff_fast( int& amount ) const;
-		QList<Image> diff_linear( int& amount ) const;
-		QList<Image> diff_all( int& amount ) const;
-		
-		static std::pair<QList<Frame>,int> lowest_cost( const QList<int>& costs, QList<QList<Frame>> all_frames, QList<int> used=QList<int>() );
-		
 		Format format;
 		
 	public:
@@ -44,7 +37,6 @@ class MultiImage {
 		void set_format( Format format ){ this->format = format; }
 		
 		QList<Frame> optimize( QString name ) const;
-		QList<Frame> optimize2( QString name ) const;
 };
 
 #endif
