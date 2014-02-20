@@ -239,6 +239,9 @@ void add_converter( QList<Converter>& used_converters, QList<QList<int>>& frames
 	add_converter( used_converters, frames, converters, amount );
 }
 
+/** Creates a progress bar on stdout with a title. Scope is used to stop the
+ *  progress bar, do not output anything to stdout until the destructor is
+ *  called */
 class ProgressBar{
 	private:
 		int amount;
@@ -247,14 +250,24 @@ class ProgressBar{
 		int written{ 0 };
 		
 	public:
-		ProgressBar( std::string msg, int amount, int size ) : amount(amount), size(size){
+		/** Create the progress bar
+		 *  
+		 *  \param [in] msg A title to be displayed together with the progress
+		 *  \param [in] amount The amount of task to be done
+		 *  \param [in] size The width of the progress bar
+		 */
+		ProgressBar( std::string msg, int amount, int size=60 ) : amount(amount), size(size){
 			std::cout << msg << std::endl;
 			for( int i=0; i<size; i++ )
 				std::cout << "_";
 			std::cout << std::endl;
 		}
+		/** Stops and closes the progress bar */
 		~ProgressBar(){ std::cout << std::endl; }
 		
+		/** Advance the progress
+		 * \param [in] progress How much progress that have been made
+		 */
 		void update( int progress=1 ){
 			for( count += progress; written < count*size/amount; written++ )
 				std::cout << "X";
@@ -266,7 +279,7 @@ QList<Frame> MultiImage::optimize2( QString name ) const{
 	int base = originals.size() - 1;
 	
 	QList<Converter> converters;
-	{	ProgressBar progress( "Generating data", base*base + base, 60 );
+	{	ProgressBar progress( "Generating data", base*base + base );
 		for( int i=0; i<originals.size(); i++ )
 			for( int j=i+1; j<originals.size(); j++ ){
 				converters << Converter( originals, i, j, format );
@@ -277,7 +290,7 @@ QList<Frame> MultiImage::optimize2( QString name ) const{
 	}
 	
 	QList<QByteArray> orgs_data;
-	{	ProgressBar progress( "Finding best base image", originals.size(), 60 );
+	{	ProgressBar progress( "Finding best base image", originals.size() );
 		for( auto org : originals ){
 			orgs_data << org.to_byte_array( format );
 			progress.update();
