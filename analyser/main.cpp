@@ -20,42 +20,24 @@
 
 #include <QMap>
 #include <QImage>
+#include <QColor>
 
 #include <vector>
 #include <algorithm>
 
 int hue( QRgb color ){
-	int min = std::min( qRed(color), std::min( qGreen(color), qBlue(color) ) );
-	int max = std::max( qRed(color), std::max( qGreen(color), qBlue(color) ) );
-	
-	int delta = max - min;
-	if( delta == 0 )
-		return 0; //TODO: something!
-	
-	int saturation = delta  / (double)max;
-	
-	double hue;
-	if( qRed(color) == max )
-		hue = ( qGreen(color) - qBlue(color) ) / (double)delta;
-	else if( qGreen(color) == max )
-		hue = 2 + ( qBlue(color) - qRed(color) ) / (double)delta;
+	return QColor( color ).hue();
+}
+int compare_hues( int h1, int h2 ){
+	int diff1 = h1-h2;
+	int diff2 = 360-std::max(h2,h1) + std::min( h2, h1 );
+	if( abs( diff1 ) < abs( diff2 ) )
+		return diff1;
 	else
-		hue = 4 + ( qRed(color) - qGreen(color) ) / (double)delta;
-	
-	hue *= 60;
-	if( hue < 0 )
-		hue += 360;
-	return hue;
+		return h1 > h2 ? -diff2 : diff2;
 }
 int saturation( QRgb color ){
-	int min = std::min( qRed(color), std::min( qGreen(color), qBlue(color) ) );
-	int max = std::max( qRed(color), std::max( qGreen(color), qBlue(color) ) );
-	
-	int delta = max - min;
-	if( delta == 0 )
-		return 0; //TODO: something!
-	
-	return delta  / (double)max * 255;
+	return QColor( color ).saturation();
 }
 
 std::vector<int> calculate_histogram( QImage image, int f(QRgb), int width=256 ){
@@ -87,7 +69,10 @@ std::vector<int> calculate_changes( QImage input, QImage output, int f(QRgb), in
 		const QRgb* in = (const QRgb*)input.constScanLine( iy );
 		const QRgb* out = (const QRgb*)output.constScanLine( iy );
 		for( int ix=0; ix<input.width(); ix++ )
-			changes[ f( in[ix] ) ] = transfer( changes[ f( in[ix] ) ], f( in[ix] ) - f( out[ix] ) );
+			if( width == 360 )
+				changes[ f( in[ix] ) ] = transfer( changes[ f( in[ix] ) ], compare_hues( f( in[ix] ), f( out[ix] ) ) );
+			else
+				changes[ f( in[ix] ) ] = transfer( changes[ f( in[ix] ) ], f( in[ix] ) - f( out[ix] ) );
 	}
 	return changes;
 }
@@ -149,7 +134,7 @@ QImage make_changes( QImage original, QImage transformed, int f(QRgb), int width
 	output.fill( qRgb( 255,255,255 ) );
 	
 	for( int ix=0; ix<width; ix++ )
-		output.setPixel( ix, width, qRgb( 127,127,127 ) );
+		output.setPixel( ix, width, qRgb( 255,127,127 ) );
 	
 	for( int ix=0; ix<width; ix++ ){
 		if( histo[ix] != 0 ){
@@ -162,6 +147,37 @@ QImage make_changes( QImage original, QImage transformed, int f(QRgb), int width
 	}
 	
 	return output;
+}
+
+QImage render_changes( QImage original, QImage transformed, int from(QRgb), QRgb to(QRgb,int), int width=256 ){
+	auto histo = calculate_histogram( original, from, width );
+	auto changes = calculate_changes( original, transformed, from, width );
+	
+	QImage output( original );
+	for( int iy=0; iy<output.height(); iy++ ){
+		QRgb* out = (QRgb*)output.scanLine( iy );
+		for( int ix=0; ix<output.width(); ix++ ){
+			int val = from( out[ix] );
+			out[ix] = to( out[ix], val - changes[val]/histo[val] );
+		}
+	}
+	
+	return output;
+}
+
+int error( QImage original, QImage transformed ){
+	int distance = 0;
+	
+	QImage output( original );
+	for( int iy=0; iy<output.height(); iy++ ){
+		QRgb* in = (QRgb*)output.scanLine( iy );
+		QRgb* out = (QRgb*)transformed.scanLine( iy );
+		for( int ix=0; ix<output.width(); ix++ ){
+			distance += std::abs( qGray(in[ix]) - qGray(out[ix]) );
+		}
+	}
+	
+	return distance;
 }
 	
 
@@ -178,7 +194,7 @@ void test_consistency( QImage image, QImage transformed ){
 	QList<int> error_blue = error_red;
 	
 	QImage output( image.width(), image.height(), QImage::Format_ARGB32 );
-	output.fill( qRgb( 127, 127, 127 ) );
+	output.fill( qRgb( 0, 0, 0 ) );
 	
 	for( int iy=0; iy<image.height(); iy++ ){
 		QRgb* org = (QRgb*)image.scanLine( iy );
@@ -201,6 +217,8 @@ void test_consistency( QImage image, QImage transformed ){
 					error_green[abs( qGreen(to) - qGreen(transform[from]) )]++;
 					error_blue[abs( qBlue(to) - qBlue(transform[from]) )]++;
 				}
+				else
+					out[ix] = transform[from];
 			}
 			else{
 				transform[from] = to;
@@ -266,12 +284,12 @@ int diff_offset( pair<int,int> range ){
 	return offset;
 }
 
-void output_diff( QImage image, QImage transformed ){
+void output_diff( QImage image, QImage transformed, int r(QRgb)=&qRed, int g(QRgb)=&qGreen, int b(QRgb)=&qBlue ){
 	QImage output( image.width(), image.height(), QImage::Format_ARGB32 );
 	
-	int red_offset = diff_offset( diff_range( image, transformed, &qRed ) );
-	int green_offset = diff_offset( diff_range( image, transformed, &qGreen ) );
-	int blue_offset = diff_offset( diff_range( image, transformed, &qBlue ) );
+	int red_offset = diff_offset( diff_range( image, transformed, r ) );
+	int green_offset = diff_offset( diff_range( image, transformed, g ) );
+	int blue_offset = diff_offset( diff_range( image, transformed, b ) );
 	
 	for( int iy=0; iy<image.height(); iy++ ){
 		QRgb* org = (QRgb*)image.scanLine( iy );
@@ -280,13 +298,13 @@ void output_diff( QImage image, QImage transformed ){
 		
 		for( int ix=0; ix<image.width(); ix++ ){
 			out[ix] = qRgb(
-					diff_center( qRed(org[ix]), qRed(result[ix]), red_offset )
-				,	diff_center( qGreen(org[ix]), qGreen(result[ix]), green_offset )
-				,	diff_center( qBlue(org[ix]), qBlue(result[ix]), blue_offset )
+					diff_center( r(org[ix]), r(result[ix]), red_offset )
+				,	diff_center( g(org[ix]), g(result[ix]), green_offset )
+				,	diff_center( b(org[ix]), b(result[ix]), blue_offset )
 				);
 		}
 	}
-	output.save( "diff_ranged.webp", nullptr, 100 );
+	output.save( "diff_ranged.png", nullptr, 100 );
 }
 
 
@@ -306,8 +324,19 @@ int main( int argc, char* argv[] ){
 		|| image.height() != transformed.height() )
 		qFatal( "Images must have same dimensions" );
 	
-//	test_consistency( image, transformed );
+	qDebug( "Hue %d - %d = %d", 70, 20, compare_hues( 70, 20 ) );
+	qDebug( "Hue %d - %d = %d", 25, 50, compare_hues( 25, 50 ) );
+	qDebug( "Hue %d - %d = %d", 200, 150, compare_hues( 200, 150 ) );
+	qDebug( "Hue %d - %d = %d", 10, 300, compare_hues( 10, 300 ) );
+	qDebug( "Hue %d - %d = %d", 300, 10, compare_hues( 300, 10 ) );
+	qDebug( "Hue %d - %d = %d", 360, 360, compare_hues( 360, 360 ) );
+	qDebug( "Hue %d - %d = %d", 0, 0, compare_hues( 0, 0 ) );
+	
+	test_consistency( image, transformed );
+	
+	qDebug( "Error is %d", error( image, transformed ) );
 	output_diff( image, transformed );
+	//output_diff( image, transformed, hue, saturation, qGray );
 	
 	make_changes( image, transformed, &qGray ).save( "change-gray.png" );
 	make_changes( image, transformed, &saturation ).save( "change-saturation.png" );
