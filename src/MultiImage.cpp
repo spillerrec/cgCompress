@@ -193,7 +193,7 @@ bool MultiImage::save( QString name ) const{
 	{	ProgressBar progress( "Optimizing images", frames.size() );
 		for( auto frame : frames ){
 			for( auto converter : frame ){
-				primitives << converter.get_primitive().remove_transparent().auto_crop();
+				primitives << converter.get_primitive().optimize_filesize( format );
 				converters << converter;
 			}
 			progress.update();
