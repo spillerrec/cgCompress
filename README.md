@@ -51,7 +51,9 @@ A custom image format is used for output. It is based on OpenRaster with the fol
 
 Qt5 plug-in for loading cgCompress images can be found here: https://github.com/spillerrec/qt5-cgcompress-plugin
 
-I have made a Windows thumbnailer for support in Windows (file) explorer, but it is not release worthy in my opinion. If requested I can try to fix it up and release the code.
+For thumbnail support in Windows, you can use the following extension: https://github.com/spillerrec/shell-ora-extension
+
+Notice that not any OpenRaster thumbnailer will work, as cgCompress allows for thumbnails in any format, while the OpenRaster specification requires the use of PNG.
 
 ## Dependencies
 
