@@ -21,27 +21,36 @@
 #include "Format.hpp"
 #include "Image.hpp"
 #include "Frame.hpp"
+#include "Converter.hpp"
 
 #include <utility>
 
 /** Contains an image which is made up of many similar images */
 class MultiImage {
+	public:
+		typedef QList<Converter> Frame;
+		
 	private:
 		Format format;
 		QList<Image> originals;
+		QList<Frame> frames;
+		
+		int compressed_size();
+		
+		static void add_converter( MultiImage& img, QList<Converter> converters, int amount );
 		
 	public:
 		/** Construct with images initialized
 		 *  \param [in] format The image format to use
 		 *  \param [in] originals The images which it is made of
 		 */
-		MultiImage( Format format, QList<Image> originals=QList<Image>() )
+		MultiImage( Format format, QList<Image> originals )
 			: format(format), originals(originals){ }
 		
-		/** \param [in] original Another image that it is made of */
-		void append( Image original ){ originals.append( original ); }
+		static MultiImage optimized( Format format, QList<Image> originals, QList<Converter> converters, int base_image );
+		static MultiImage optimized( Format format, QList<Image> originals );
 		
-		bool optimize( QString name ) const;
+		bool save( QString name ) const;
 };
 
 #endif

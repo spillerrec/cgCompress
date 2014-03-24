@@ -19,9 +19,13 @@
 #include "OraSaver.hpp"
 #include "Converter.hpp"
 
+#include "ListFunc.hpp"
+
 #include <climits>
 #include <iostream>
 #include <string>
+#include <map>
+#include <utility>
 
 #include <QDebug>
 
@@ -37,51 +41,57 @@ QList<T> remove_duplicates( QList<T> elements ){
 	return list;
 }
 
+int MultiImage::compressed_size(){
+	using namespace std;
+	std::map<pair<int,int>,int> sizes;
+	
+	for( auto frame : frames )
+		for( auto converter : frame )
+			sizes[make_pair(converter.get_from(), converter.get_to())] = converter.get_size();
+	
+	int total = 0;
+	for( auto size : sizes )
+		total += size.second;
+	
+	return total;
+}
+
 /** Find a converter to a frame not found, will be called recursively to find
  *  all frames.
  *  \param [in,out] used_converters The converters found will be added to this
- *  \param [in,out] frames The list of transformations to get the images. Each *                     transformation contains a the indexes of images to get
+ *  \param [in,out] frames The list of transformations to get the images. Each
+ *                     transformation contains a the indexes of images to get
  *                     to the final image.
  *  \param [in] converters The available converters which may be used
  *  \param [in] amount The total amount of frames
  */
-void add_converter( QList<Converter>& used_converters, QList<QList<int>>& frames, const QList<Converter>& converters, int amount ){
-	if( amount == frames.size() )
+void MultiImage::add_converter( MultiImage& img, QList<Converter> converters, int amount ){
+	if( amount == img.frames.size() )
 		return;
+	qDebug() << "add_conveter " << img.frames.size();
 	
 	QList<int> has;
-	for( auto frame : frames )
-		for( auto layer : frame )
-			if( !has.contains( layer ) )
-				has << layer;
-	QList<int> used;
-	for( auto frame : frames )
-		used << frame.last();
-	
-	int best_converter = -1;
-	int filesize = INT_MAX;
-	for( int i=0; i<converters.size(); i++ ){
-		if( has.contains( converters[i].get_from() ) && !used.contains( converters[i].get_to() ) )
-			if( converters[i].get_size() < filesize ){
-				best_converter = i;
-				filesize = converters[i].get_size();
-			}
-	}
-	if( best_converter == -1 )
-		qFatal( "No converter could be found!" );
-	
-	QList<int> from_frame;
-	for( auto frame : frames )
-		if( frame.last() == converters[best_converter].get_from() ){
-			from_frame = frame;
-			break;
+	for( auto frame : img.frames ){
+	qDebug() << "Has: " << frame.last().get_to();
+		has << frame.last().get_to();
 		}
 	
-	used_converters << converters[best_converter];
-	//if( converters[best_converter].get_primitive().is_valid() )
-	frames << ( from_frame << converters[best_converter].get_to() );
+	auto valid = filter( converters, [has](Converter c){ return !has.contains(c.get_from()) || has.contains(c.get_to()); } );
+	qDebug() << "Valid:";
+	for( auto converter : valid )
+		qDebug() << converter.get_from() << " " << converter.get_to();
+	auto best = minimum( valid, [](Converter c1, Converter c2){ return c1.get_size() < c2.get_size(); } );
+	if( best >= valid.end() ){
+		qDebug() << "oh no";
+		return; //TODO:
+	}
 	
-	add_converter( used_converters, frames, converters, amount );
+	//Remove converters to this image, we don't need them any more
+	int to = (*best).get_to();
+	filter_inpl( converters, [to](Converter c){ return c.get_to() == to; } );
+	
+	img.frames << (Frame() << *best);
+	add_converter( img, converters, amount );
 }
 
 /** Creates a progress bar on stdout with a title. Scope is used to stop the
@@ -129,12 +139,55 @@ class ProgressBar{
 		}
 };
 
-/** Create an efficient composite version and save it to a cgCompress file.
- *  \param [in] name File path for the output file, without the extension
- *  \return true on success
- */
-bool MultiImage::optimize( QString name ) const{
-	qDebug() << "Compressing " << name;
+
+MultiImage MultiImage::optimized( Format format, QList<Image> originals, QList<Converter> converters, int base_image ){
+	MultiImage multi( format, originals );
+	multi.frames << ( QList<Converter>() << Converter( originals, base_image, base_image, format ) );
+	//TODO: first frame contains originals[base_image]
+
+	add_converter( multi, converters, originals.size() );
+	sort( multi.frames, [](Frame first, Frame last){ return first.last().get_to() < last.last().get_to(); } );
+	
+	/*
+	//Convert combined to multi.frames
+	for( auto comb : combined ){
+		Frame frame;
+		frame << 0;
+		for( int j=1; j<comb.size(); j++ ){
+			int from = frame.last();
+			from = (j == 1) ? base_image : comb[j-1];
+			for( int i=0; i<used_converters.size(); i++ ){
+				if( from == used_converters[i].get_from() && comb[j] == used_converters[i].get_to() ){
+					frame << i+1;
+					break;
+				}
+			}
+		}
+		multi.frames << frame;
+	}
+	
+	// Try to reuse planes if possible
+	for( int i=0; i<multi.primitives.size(); i++ ){
+		//TODO: replace the order would avoid having to check?
+		if( !multi.primitives[i].img.is_valid() )
+			continue;
+		for( int j=i+1; j<multi.primitives.size(); j++ ){
+			if( !multi.primitives[j].img.is_valid() )
+				continue;
+			
+			Image result = multi.primitives[i].img.contain_both( multi.primitives[j].img );
+			if( result.is_valid() ){
+				multi.primitives[j] = Primitive( Image( {0,0}, QImage() ), format );
+				multi.replace_primitive( j, QList<int>() << i );
+			}
+		}
+	}
+	
+	//TODO: combine stuff
+	*/
+	return multi;
+}
+MultiImage MultiImage::optimized( Format format, QList<Image> originals ){
 	int base = originals.size() - 1;
 	
 	QList<Converter> converters;
@@ -148,87 +201,97 @@ bool MultiImage::optimize( QString name ) const{
 			}
 	}
 	
-	//Try all originals as the base image, and pick the best one
-	int best_size = INT_MAX;
-	QList<Image> final_primitives;
-	QList<Frame> final_frames;
-	
 	//Only do the first one, unless high precision have been selected
-	int test_amount = (format.get_precision() == 0) ? originals.size() : 1;
+	int test_amount = 1;//(format.get_precision() == 0) ? originals.size() : 1;
+	QList<int> testing;
+	for( int best_start=0; best_start<test_amount; best_start++ )
+		testing << best_start;
+	
+	//Try all originals as the base image, and pick the best one
+	QList<MultiImage> imgs;
 	{	ProgressBar progress( "Finding efficient solution", test_amount );
-		for( int best_start=0; best_start<test_amount; best_start++, progress.update() ){
-			QList<QList<int>> combined;
-			QList<Converter> used_converters;
-			combined << ( QList<int>() << best_start  );
-			
-			add_converter( used_converters, combined, converters, originals.size() );
-			qSort( combined.begin(), combined.end(), []( const QList<int>& first, const QList<int>& last ){ return first.last() < last.last(); } );
-			
-			QList<Image> primitives;
-			QList<int> file_sizes; //File size cache
-			primitives << originals[best_start];
-			file_sizes << originals[best_start].compressed_size( format, Format::MEDIUM );
-			for( auto used : used_converters ){
-				primitives.append( used.get_primitive() );
-				file_sizes << used.get_size();
-			}
-			
-			QList<Frame> frames;
-			for( auto comb : combined ){
-				Frame f( primitives );
-				f.layers << 0;
-				for( int j=1; j<comb.size(); j++ ){
-					int from = f.layers.last();
-					from = (j == 1) ? best_start : comb[j-1];
-					for( int i=0; i<used_converters.size(); i++ ){
-						if( from == used_converters[i].get_from() && comb[j] == used_converters[i].get_to() ){
-							f.layers << i+1;
-							break;
-						}
-					}
-				}
-				frames << f;
-			}
-			
-			// Try to reuse planes if possible
-			for( int i=0; i<primitives.size(); i++ ){
-				if( !primitives[i].is_valid() )
-					continue;
-				for( int j=i+1; j<primitives.size(); j++ ){
-					if( !primitives[j].is_valid() )
-						continue;
-					
-					Image result = primitives[i].contain_both( primitives[j] );
-					if( result.is_valid() ){
-						primitives[i] = result;
-						primitives[j] = Image( {0,0}, QImage() );
-						file_sizes[j] = 0;
-						
-						for( auto& frame : frames )
-							for( auto& layer : frame.layers )
-								if( layer == j )
-									layer = i;
-					}
-				}
-			}
-			
-			//Evaluate file size and overwrite old solution if better
-			int filesize = std::accumulate( file_sizes.begin(), file_sizes.end(), 0 );
-			if( filesize < best_size ){
-				best_size = filesize;
-				final_primitives = primitives;
-				final_frames = frames;
-			}
+		imgs = map<MultiImage>( testing, [&](int i){
+				progress.update();
+				return optimized( format, originals, converters, i );
+			} );
+	}
+	
+	MultiImage img( *maximum( imgs, [](MultiImage& img1, MultiImage& img2){
+			return img1.compressed_size() < img2.compressed_size();
+		} ) );
+	
+	/*
+	{	ProgressBar progress( "Optimizing images", img.primitives.size()-1 );
+		for( int i=1; i<img.primitives.size(); i++, progress.update() )
+			if( img.primitives[i].img.is_valid() )
+				img.primitives[i].img = img.primitives[i].img.auto_crop().optimize_filesize( format );
+	}
+	*/
+	
+	//OraSaver( final_primitives, final_frames ).save( name + ".cgcompress", format );
+	return img;
+}
+
+typedef Frame Frame2;
+bool MultiImage::save( QString name ) const{
+	QList<Image> primitives;
+	QList<Converter> converters;
+	
+	qDebug() << "Frames: " << frames.size();
+	for( auto frame : frames ){
+		qDebug() << "Converters: " << frame.size();
+		for( auto converter : frame ){
+			primitives << converter.get_primitive().remove_transparent().auto_crop();
+			converters << converter;
 		}
 	}
 	
-	{	ProgressBar progress( "Optimizing images", final_primitives.size()-1 );
-		for( int i=1; i<final_primitives.size(); i++, progress.update() )
-			if( final_primitives[i].is_valid() )
-				final_primitives[i] = final_primitives[i].auto_crop().optimize_filesize( format );
+	for( auto current : converters )
+			qDebug() << "Current: " << current.get_from() << " " << current.get_to();
+	
+	QList<Frame2> output;
+	for( auto frame : frames ){
+		QList<int> out;
+		
+		qDebug() << "Frame";
+		auto current = frame.first();
+		QList<int> pre; //All neeeded converters to this point
+		while( true ){
+			qDebug() << "Current: " << current.get_from() << " " << current.get_to();
+			if( current.get_from() == current.get_to() ){
+				pre << converters.indexOf( current );
+				break;
+			}
+			else{
+				pre << converters.indexOf( current );
+				for( auto converter : converters )
+					if( converter.get_to() == current.get_from() ){
+						bool can_use = true;
+						for( auto p : pre )
+							if( converters[p] == converter )
+								can_use = false;
+						if( can_use ){
+							current = converter;
+		qDebug() << "Next: " << converters.indexOf( current );
+							break;
+						}
+					}
+			}
+		}
+		while( pre.size() > 0 )
+			out << pre.takeLast();
+		
+		for( int i=1; i<frame.size(); i++ )
+			out << converters.indexOf( frame[i] );
+			
+		Frame2 f( primitives );
+		f.layers = out;
+		output << f;
 	}
 	
-	OraSaver( final_primitives, final_frames ).save( name + ".cgcompress", format );
+	OraSaver( primitives, output ).save( name + ".cgcompress", format );
+	
 	return true;
+	//TODO:
 }
 

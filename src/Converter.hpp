@@ -30,7 +30,7 @@
  */
 class Converter {
 	private:
-		const QList<Image>& base_images;
+		QList<Image> base_images;
 		int from;
 		int to;
 		int size;
@@ -41,10 +41,10 @@ class Converter {
 		 *  \param [in] to Index to the image to end on
 		 *  \param [in] format The format used for compressing
 		 */
-		Converter( const QList<Image>& base_images, int from, int to, Format format )
+		Converter( QList<Image> base_images, int from, int to, Format format )
 			:	base_images(base_images)
 			,	from(from), to(to) {
-				size = get_primitive().remove_transparent().auto_crop().compressed_size( format, Format::MEDIUM ); //TODO: fix format
+				size = get_primitive().remove_transparent().auto_crop().compressed_size( format, Format::MEDIUM );
 			}
 		
 		/** \return Index to the start image */
@@ -57,8 +57,16 @@ class Converter {
 		int get_size() const{ return size; }
 		
 		/** \return The image used for converting **/
-		Image get_primitive() const{ return base_images[from].difference( base_images[to] ); }
+		Image get_primitive() const{ 
+			if( from != to )
+				return base_images[from].difference( base_images[to] );
+			else
+				return base_images[from];
+		}
 		
+		bool operator==( const Converter& other ) const{
+			return from == other.from && to == other.to && size == other.size && base_images == other.base_images;
+		}
 };
 
 #endif

@@ -23,6 +23,7 @@
 #include "Format.hpp"
 #include "MultiImage.hpp"
 #include "FileUtils.hpp"
+#include "ListFunc.hpp"
 
 #include <iostream>
 using namespace std;
@@ -128,12 +129,11 @@ int main( int argc, char* argv[] ){
 	else if( options.contains( "--recompress" ) ){
 		for( auto file : files ){
 			auto images = extract_files( file );
-			
-			MultiImage multi_img( format );
+			QList<Image> imgs;
 			for( auto image : images )
-				multi_img.append( Image( {0,0}, image.second ) );
+				imgs << Image( {0,0}, image.second );
 			
-			multi_img.optimize( QFileInfo(file).baseName() + ".recompressed" );
+			MultiImage::optimized( format, imgs ).save( QFileInfo(file).baseName() + ".recompressed" );
 		}
 		
 		return 0;
@@ -147,11 +147,9 @@ int main( int argc, char* argv[] ){
 			return -1;
 		}
 		
-		MultiImage multi_img( format );
-		for( auto file : files )
-			multi_img.append( Image( file ) );
-		
-		multi_img.optimize( QFileInfo(files[0]).baseName() );
+		MultiImage::optimized( format
+			,	map<Image>( files, [](QString info){ return Image(info); } )
+			).save( QFileInfo(files[0]).baseName() );
 		
 		return 0;
 	}
