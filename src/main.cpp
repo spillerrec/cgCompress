@@ -148,7 +148,7 @@ int main( int argc, char* argv[] ){
 		}
 		
 		MultiImage::optimized( format
-			,	map<Image>( files, [](QString info){ return Image(info); } )
+			,	map2<Image>( files, [](QString info){ return Image(info); } )
 			).save( QFileInfo(files[0]).baseName() );
 		
 		return 0;

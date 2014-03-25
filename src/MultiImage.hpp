@@ -22,31 +22,33 @@
 #include "Image.hpp"
 #include "Frame.hpp"
 #include "Converter.hpp"
+#include "ConversionSteps.hpp"
 
 #include <utility>
 
 /** Contains an image which is made up of many similar images */
 class MultiImage {
-	public:
-		typedef QList<Converter> Frame;
-		
 	private:
 		Format format;
 		QList<Image> originals;
-		QList<Frame> frames;
+		ConversionSteps steps;
 		
-		int compressed_size();
-		
-		static void add_converter( MultiImage& img, QList<Converter> converters, int amount );
+		int compressed_size(){ return steps.fileSize(); }
 		
 	public:
 		/** Construct with images initialized
 		 *  \param [in] format The image format to use
 		 *  \param [in] originals The images which it is made of
 		 */
-		MultiImage( Format format, QList<Image> originals )
-			: format(format), originals(originals){ }
+		MultiImage( Format format, QList<Image> originals, QList<Converter> converters )
+			: format(format), originals(originals), steps( originals, converters ){ }
 		
+		MultiImage( Format format, QList<Image> originals )
+			:	format(format), originals(originals)
+			,	steps( originals, generateConverters( format, originals ) )
+			{ }
+		
+		static QList<Converter> generateConverters( Format format, QList<Image> originals );
 		static MultiImage optimized( Format format, QList<Image> originals, QList<Converter> converters, int base_image );
 		static MultiImage optimized( Format format, QList<Image> originals );
 		

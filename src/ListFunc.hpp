@@ -53,6 +53,15 @@ QList<T2> map( const QList<T1>& list, BinaryOperation bop ){
 	return output;
 }
 
+template<typename T2, typename T1, class BinaryOperation>
+QList<T2> map2( const QList<T1>& list, BinaryOperation bop ){
+	QList<T2> output;
+	output.reserve( list.size() );
+	for( auto e : list )
+		output.append( bop( e ) );
+	return output;
+}
+
 template<class T1, class Function>
 void for_each( T1 list, Function fn ){
 	std::for_each( list.begin(), list.end(), fn );

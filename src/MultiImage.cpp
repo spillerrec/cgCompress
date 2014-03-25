@@ -29,61 +29,6 @@
 
 #include <QDebug>
 
-//TODO: this is used in several places, find a fitting place to have this
-template<typename T>
-QList<T> remove_duplicates( QList<T> elements ){
-	QList<T> list;
-	
-	for( auto element : elements )
-		if( !list.contains( element ) )
-			list.append( element );
-	
-	return list;
-}
-
-int MultiImage::compressed_size(){
-	using namespace std;
-	std::map<pair<int,int>,int> sizes;
-	
-	for( auto frame : frames )
-		for( auto converter : frame )
-			sizes[make_pair(converter.get_from(), converter.get_to())] = converter.get_size();
-	
-	int total = 0;
-	for( auto size : sizes )
-		total += size.second;
-	
-	return total;
-}
-
-/** Find a converter to a frame not found, will be called recursively to find
- *  all frames.
- *  \param [in,out] used_converters The converters found will be added to this
- *  \param [in,out] frames The list of transformations to get the images. Each
- *                     transformation contains a the indexes of images to get
- *                     to the final image.
- *  \param [in] converters The available converters which may be used
- *  \param [in] amount The total amount of frames
- */
-void MultiImage::add_converter( MultiImage& img, QList<Converter> converters, int amount ){
-	if( amount == img.frames.size() )
-		return;
-	
-	//We only want converters that originates in already known frames, and ends in an unknown one
-	QList<int> has = map<int>( img.frames, []( Frame f ){ return f.last().get_to(); } );
-	auto valid = filter( converters, [has](Converter c){ return !has.contains(c.get_from()) || has.contains(c.get_to()); } );
-	
-	//And we want the one that uses the least space of course
-	auto best = minimum( valid, [](Converter c1, Converter c2){ return c1.get_size() < c2.get_size(); } );
-	
-	//Remove converters to this image, we don't need them any more
-	int to = (*best).get_to();
-	filter_inpl( converters, [to](Converter c){ return c.get_to() == to; } );
-	
-	//Add the one we found, and find the rest recursively
-	img.frames << (Frame() << *best);
-	add_converter( img, converters, amount );
-}
 
 /** Creates a progress bar on stdout with a title. Scope is used to stop the
  *  progress bar, do not output anything to stdout until the destructor is
@@ -131,34 +76,38 @@ class ProgressBar{
 };
 
 
-MultiImage MultiImage::optimized( Format format, QList<Image> originals, QList<Converter> converters, int base_image ){
-	MultiImage multi( format, originals );
+QList<Converter> MultiImage::generateConverters( Format format, QList<Image> originals ){
+	int base = originals.size() - 1;
 	
-	//Add the base image
-	multi.frames << ( QList<Converter>() << Converter( originals, base_image, base_image, format ) );
-	//TODO: can we make this more general?
+	QList<Converter> converters;
+	{	ProgressBar progress( "Generating data", base*base + base );
+		for( int i=0; i<originals.size(); i++ ){
+			converters << Converter( originals, {{i, i}}, format );
+			for( int j=i+1; j<originals.size(); j++ ){
+				converters << Converter( originals, {{i, j}}, format );
+				progress.update();
+				converters << Converter( originals, {{j, i}}, format );
+				progress.update();
+			}
+		}
+	}
+	
+	//TODO: combine converters
+	
+	return converters;
+}
 
-	add_converter( multi, converters, originals.size() );
+MultiImage MultiImage::optimized( Format format, QList<Image> originals, QList<Converter> converters, int base_image ){
+	MultiImage multi( format, originals, converters );
 	
-	//Make sure everything is in the right order
-	sort( multi.frames, [](Frame first, Frame last){ return first.last().get_to() < last.last().get_to(); } );
+	multi.steps.addBaseImage( base_image );
+	multi.steps.findBestConverters();
 	
 	return multi;
 }
 
 MultiImage MultiImage::optimized( Format format, QList<Image> originals ){
-	int base = originals.size() - 1;
-	
-	QList<Converter> converters;
-	{	ProgressBar progress( "Generating data", base*base + base );
-		for( int i=0; i<originals.size(); i++ )
-			for( int j=i+1; j<originals.size(); j++ ){
-				converters << Converter( originals, i, j, format );
-				progress.update();
-				converters << Converter( originals, j, i, format );
-				progress.update();
-			}
-	}
+	QList<Converter> converters = generateConverters( format, originals );
 	
 	//Only do the first one, unless high precision have been selected
 	int test_amount = (format.get_precision() == 0) ? originals.size() : 1;
@@ -178,70 +127,38 @@ MultiImage MultiImage::optimized( Format format, QList<Image> originals ){
 	//Pick the one which causes the lowest file size
 	MultiImage img( *maximum( imgs, [](MultiImage& img1, MultiImage& img2){
 			return img1.compressed_size() < img2.compressed_size();
-		} ) );
+		} ) ); //TODO: access steps directly
 	
 	return img;
 }
 
-typedef Frame Frame2;
 bool MultiImage::save( QString name ) const{
 	//Parallel lists, 'converters' are the ones that produce 'primitives'
 	QList<Image> primitives;
-	QList<Converter> converters;
+	QList<Converter const*> converters;
+	
+	//Extract all converters
+	for( auto conversion : steps.getConversions() ){
+		if( !converters.contains( conversion.getConverter() ) )
+			converters << conversion.getConverter();
+	}
 	
 	//Extract all primitives, and use 'converters' to keep track of them
-	{	ProgressBar progress( "Optimizing images", frames.size() );
-		for( auto frame : frames ){
-			for( auto converter : frame ){
-				primitives << converter.get_primitive().optimize_filesize( format );
-				converters << converter;
-			}
+	{	ProgressBar progress( "Optimizing images", converters.size() );
+		for( auto converter : converters ){
+			primitives << converter->get_primitive().auto_crop().optimize_filesize( format );
 			progress.update();
 		}
 	}
 	
 	//Convert all converters to Frames, as needed by OraSaver
-	QList<Frame2> output;
-	for( auto frame : frames ){
-		QList<int> out;
+	QList<Frame> output;
+	for( int i=0; i<originals.size(); i++ ){
+		auto convs = steps.getConversionsTo( i );
 		
-		//Find all converters needed to get to the state required for the first converter
-		//TODO: find the solution which uses the fewest converters?
-		auto current = frame.first();
-		QList<int> pre;
-		while( true ){
-			pre << converters.indexOf( current );
-			if( current.get_from() == current.get_to() )
-				//We reached a full image, stop
-				break;
-			else{
-				//Find another converter which leads to this one
-				for( auto converter : converters )
-					if( converter.get_to() == current.get_from() ){
-						//Make sure we don't reuse converters, causing infinite loop
-						//TODO: really needed?
-						bool can_use = true;
-						for( auto p : pre )
-							if( converters[p] == converter )
-								can_use = false;
-						if( can_use ){
-							current = converter;
-							break;
-						}
-					}
-			}
-		}
-		//Add in reverse
-		while( pre.size() > 0 )
-			out << pre.takeLast();
-		
-		//Add remaining converters
-		for( int i=1; i<frame.size(); i++ )
-			out << converters.indexOf( frame[i] );
-		
-		//Create it as a Frame
-		Frame2 f( primitives );
-		f.layers = out;
+		Frame f( primitives );
+		for( auto conv : convs )
+			f.layers << converters.indexOf( conv.getConverter() );
 		output << f;
 	}
 	
