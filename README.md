@@ -46,6 +46,7 @@ A custom image format is used for output. It is based on OpenRaster with the fol
 - Multiple images are supported, which is done by interpreting <stack> elements which are direct descendants of the root <image> element as separate images. When the specification for MultiplePages in OpenRaster appear, this format might be updated to reflect that. Thus, **this format might change!**
 - Thumbnails may use other formats than PNG.
 - mergedimage.png is not required. We don't want to waste space on that.
+- Animated if the "loops" attribute on <image> is different than '0', which is the default value. '-1' means infinite looping. The "delay" attribute on <stack> elements controls how many ms it should wait before switching to the next frame, and defaults to "100".
 
 ### Support
 
