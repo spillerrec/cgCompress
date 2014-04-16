@@ -30,6 +30,7 @@ class ConversionSteps {
 		int amount;
 		
 		Conversion convertionTo( int image ) const;
+		QList<Conversion> optimizedConverters( QList<Conversion> in ) const;
 		
 	public:
 		ConversionSteps( QList<Image> base_images, QList<Converter> converters )
@@ -42,11 +43,7 @@ class ConversionSteps {
 		void addBaseImage( int base );
 		QList<Conversion> getConversions() const{ return conversions; }
 		
-		void addConvertion( Conversion c ){
-			conversions << c;
-			has << c.to;
-			//TODO: when to remove unneeded converters?
-		}
+		void addConvertion( Conversion c );
 		
 		void findBestConverters();
 		

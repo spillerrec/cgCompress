@@ -79,15 +79,29 @@ class ProgressBar{
 QList<Converter> MultiImage::generateConverters( Format format, QList<Image> originals ){
 	int base = originals.size() - 1;
 	
-	QList<Converter> converters;
+	QList<Converter> diffs;
 	{	ProgressBar progress( "Generating data", base*base + base );
 		for( int i=0; i<originals.size(); i++ ){
-			converters << Converter( originals, {{i, i}}, format );
+			diffs << Converter( originals, {{i, i}}, format );
 			for( int j=i+1; j<originals.size(); j++ ){
-				converters << Converter( originals, {{i, j}}, format );
+				diffs << Converter( originals, {{i, j}}, format );
 				progress.update();
-				converters << Converter( originals, {{j, i}}, format );
+				diffs << Converter( originals, {{j, i}}, format );
 				progress.update();
+			}
+		}
+	}
+	
+	
+	QList<Converter> converters;
+	for( int i=0; i<diffs.size(); i++ ){
+		converters << diffs[i];
+		
+		for( int j=i-1; j>=0; j-- ){
+			Image img = diffs[i].get_primitive().contain_both( diffs[j].get_primitive() );
+			if( img.is_valid() ){
+				converters << Converter( originals, {diffs[i].getSteps()[0], diffs[j].getSteps()[0]}, format );
+				//qDebug() << "Adding converter";
 			}
 		}
 	}

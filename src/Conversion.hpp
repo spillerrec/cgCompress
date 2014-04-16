@@ -35,7 +35,7 @@ class Conversion {
 		Converter const* getConverter() const{ return converter; }
 		
 		bool operator==( const Conversion& other ) const{
-			return from == other.from && to == other.to && size == other.size && converter == other.converter;
+			return from == other.from && to == other.to && converter == other.converter;
 		}
 		
 		bool operator<( const Conversion& other ) const{

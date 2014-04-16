@@ -18,6 +18,15 @@
 #include "ConversionSteps.hpp"
 #include "ListFunc.hpp"
 
+QList<Conversion> ConversionSteps::optimizedConverters( QList<Conversion> in ) const{
+	QList<Converter const*> converters;
+	for( auto conv : in )
+		if( !converters.contains( conv.getConverter() ) )
+			converters << conv.getConverter();
+	
+	
+}
+
 QList<Conversion> ConversionSteps::usableConvertions() const{
 	QList<Conversion> convs;
 	for( const auto& converter : converters ){
@@ -59,8 +68,6 @@ void ConversionSteps::findBestConverters(){
 		//TODO: exception if no convs?
 		addConvertion( *minimum( convs ) );
 	}
-	//sort( convertions, [](Conversion first, Conversion last){ return first.to < last.to; } );
-	//TODO:
 }
 
 
@@ -113,5 +120,16 @@ QList<Conversion> ConversionSteps::getConversionsTo( int image ) const{
 		convs << pre.takeLast();
 			
 	return convs;
+}
+
+
+void ConversionSteps::addConvertion( Conversion c ){
+	if( c.getConverter()->getSteps().size() == 1 ){
+		conversions << c;
+		has << c.to;
+	}
+	else
+		qDebug( "TODO: optimize converters" );
+	//TODO: when to remove unneeded converters?
 }
 
