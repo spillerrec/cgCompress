@@ -79,6 +79,7 @@ class Image {
 		QList<Image> diff_segment( Image diff ) const;
 		
 		Image combine( Image on_top ) const;
+		void combineInplace( Image on_top );
 		
 		Image contain_both( Image diff ) const;
 		
@@ -97,6 +98,7 @@ class Image {
 		Image auto_crop() const;
 		
 		Image optimize_filesize( Format format ) const;
+		Image optimize_filesize_blocks( Format format ) const;
 		
 		/** \param [in] other Image to compare against
 		 *  \return true if images are interchangeable */

@@ -150,6 +150,15 @@ Image Image::combine( Image on_top ) const{
 	return Image( tl, output );
 }
 
+/** Paint another image on top of this one, modifying the image in-place.
+ *  Must be contained in this image.
+ *  \param [in] on_top Image to paint
+ *  \return The combined image */
+void Image::combineInplace( Image on_top ){
+	QPainter painter( &img );
+	painter.drawImage( on_top.pos-pos, on_top.img );
+}
+
 /** The difference between the two images
  *  \param [in] input The image to diff on, must have same dimensions
  *  \return The difference */
@@ -255,7 +264,7 @@ Image Image::clean_alpha( int kernel_size, int threshold ) const{
 	
 	for( int iy=0; iy<output.height(); iy++ ){
 		QRgb* out = (QRgb*)output.scanLine( iy );
-		const QRgb* in = (const QRgb*)img.scanLine( iy );
+		const QRgb* in = (const QRgb*)img.constScanLine( iy );
 		for( int ix=0; ix<output.width(); ix++ )
 			if( qAlpha( in[ix] ) == 0 ){
 				out[ix] = qRgba( 0,0,0,0 );
@@ -341,12 +350,25 @@ RIGHT_BREAK:
  *  \param [in] format Format used for compression
  *  \return Optimized image */
 Image Image::optimize_filesize( Format format ) const{
-	//TODO: skip images with no transparency
+	//skip images with no transparency
+	unsigned black = 0, white = 0, total = img.width()*img.height();
+	for( int iy=0; iy<img.height(); iy++ ){
+		auto row = (const QRgb*)img.constScanLine( iy );
+		for( int ix=0; ix<img.width(); ix++ ){
+			auto val = qAlpha( row[ix] );
+			if( val == 0 )
+				black++;
+			if( val == 255 )
+				white++;
+		}
+	}
 	
 	//Start with the basic image
 	Image best = remove_transparent();
 	int best_size = best.compressed_size( format, Format::MEDIUM );
-	int original_size = best_size;
+	
+	if( black == total || white == total )
+		return best;
 	
 	for( int i=0; i<7; i++ )
 		for( int j=0; j<i*i; j++ ){
@@ -359,6 +381,20 @@ Image Image::optimize_filesize( Format format ) const{
 		}
 	
 	return best;
+}
+
+/** Minimize file size by cleaning the alpha, using 8x8 blocks to speed up empty areas
+ *  \param [in] format Format used for compression
+ *  \return Optimized image */
+Image Image::optimize_filesize_blocks( Format format ) const{
+	auto copy = *this;
+	for( int iy=0; iy<img.height(); iy+=8 )
+		for( int ix=0; ix<img.width(); ix+=8 ){
+			auto block = copy.sub_image( ix, iy, 8, 8 ).optimize_filesize( format );
+			copy.combineInplace( block );
+		}
+	
+	return copy;
 }
 
 
