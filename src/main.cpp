@@ -92,6 +92,18 @@ Format get_format( QStringList options ){
 	return f;
 }
 
+static int optimizeImage( MultiImage& img, QString output_path ){
+	img.optimize( output_path );
+	if( !img.validate( output_path ) ){
+		//Issue with file, don't convert
+		cout << "Resulting file did not pass validity check!\n";
+		QFile::remove( output_path );
+		std::getchar();
+		return -1;
+	}
+	return 0;
+}
+
 int main( int argc, char* argv[] ){
 	QCoreApplication app( argc, argv );
 	
@@ -128,12 +140,13 @@ int main( int argc, char* argv[] ){
 	else if( options.contains( "--recompress" ) ){
 		for( auto file : files ){
 			auto images = extract_files( file );
+			QString name( QFileInfo(file).baseName() + ".recompressed" );
 			
 			MultiImage multi_img( format );
 			for( auto image : images )
 				multi_img.append( Image( {0,0}, image.second ) );
 			
-			multi_img.optimize( QFileInfo(file).baseName() + ".recompressed" );
+			optimizeImage( multi_img, name );
 		}
 		
 		return 0;
@@ -151,8 +164,6 @@ int main( int argc, char* argv[] ){
 		for( auto file : files )
 			multi_img.append( Image( file ) );
 		
-		multi_img.optimize( QFileInfo(files[0]).baseName() );
-		
-		return 0;
+		return optimizeImage( multi_img, QFileInfo(files[0]).baseName() );
 	}
 }

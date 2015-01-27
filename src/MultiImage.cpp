@@ -24,6 +24,7 @@
 #include <iostream>
 #include <string>
 
+#include <QImageReader>
 #include <QDebug>
 
 //TODO: this is used in several places, find a fitting place to have this
@@ -187,5 +188,24 @@ bool MultiImage::optimize( QString name ) const{
 	
 	OraSaver( final_primitives, final_frames ).save( name + ".cgcompress", format );
 	return true;
+}
+
+/** \return True if 'file' is decoded exactly like this MultiImage
+ *  \param [in] file File path for file to validate
+ */
+bool MultiImage::validate( QString file ) const{
+	QImageReader reader( file );
+	
+	QImage current;
+	for( int i=0; i<originals.count(); i++ ){
+		if( !reader.read( &current ) )
+			return false;
+		
+		if( current.convertToFormat(QImage::Format_ARGB32) != originals[i].qimg().convertToFormat(QImage::Format_ARGB32) )
+			return false;
+	}
+	
+	//Fail if there are more images available
+	return !reader.read( &current );
 }
 
