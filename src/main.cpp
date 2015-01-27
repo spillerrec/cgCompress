@@ -145,6 +145,9 @@ int main( int argc, char* argv[] ){
 			MultiImage multi_img( format );
 			for( auto image : images )
 				multi_img.append( Image( {0,0}, image.second ) );
+		
+			if( options.contains( "--noalpha" ) )
+				multi_img.removeAlpha();
 			
 			optimizeImage( multi_img, name );
 		}
@@ -163,6 +166,9 @@ int main( int argc, char* argv[] ){
 		MultiImage multi_img( format );
 		for( auto file : files )
 			multi_img.append( Image( file ) );
+		
+		if( options.contains( "--noalpha" ) )
+			multi_img.removeAlpha();
 		
 		return optimizeImage( multi_img, QFileInfo(files[0]).baseName() );
 	}

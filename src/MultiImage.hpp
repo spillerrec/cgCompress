@@ -44,6 +44,9 @@ class MultiImage {
 		bool optimize( QString name ) const;
 		
 		bool validate( QString file ) const;
+		
+		/** Remove alpha from input images */
+		void removeAlpha() { for( auto& original : originals ) original.removeAlpha(); }
 };
 
 #endif

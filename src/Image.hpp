@@ -45,6 +45,10 @@ class Image {
 		/** \return The image data */
 		QImage qimg() const{ return img; }
 		
+		/** Remove alpha */
+		void removeAlpha()
+			{ img = img.convertToFormat(QImage::Format_RGB32).convertToFormat(QImage::Format_ARGB32); }
+		
 		/** Save the image to the file system
 		 *  \param [in] path The location on the file system
 		 *  \param [in] format The format used for compression

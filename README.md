@@ -31,6 +31,9 @@ Extract and recompress cgCompress files. Useful for optimizing files which were 
     --pack
 Create a cgCompress file from a directory containing an un-zipped cgCompress file. OpenRaster sets some requirements on the structure of the zip archive such as file order and compression settings, use this option to get it correct.
 
+    --noalpha
+Ignore the alpha channel in the input images. Some CG collections have a small amount of transparency around the edges for no good apparent reason.
+
 ## Status
 
 - Prof of concept
@@ -38,7 +41,6 @@ Create a cgCompress file from a directory containing an un-zipped cgCompress fil
 - Segmentation needs to be redone, and done with respect to file size.
 - Some images contain the same image, but with color changes. Some success have been had with alternative composite methods, but still needs to be further investigated.
 - The input images must currently not contain alpha, which means we can't optimize character sprites. Make it work!
-- Check if the reconstructed images are correct. Lossless is 100%, not 99.999% because of programmer stupidity.
 
 ## Output format
 
