@@ -16,6 +16,7 @@
 */
 
 #include "OraSaver.hpp"
+#include "ProgressBar.hpp"
 
 #include <QFileInfo>
 #include <QDateTime>
@@ -125,9 +126,12 @@ void OraSaver::save( QString path, Format format ) const{
 			if( !used.contains( layer ) )
 				used.append( layer );
 	
-	for( auto layer : used ){
-		QString name = QString( "data/%1.%2" ).arg( layer ).arg( format.ext() );
-		files.append( { name, primitives[layer].to_byte_array( format ) } );
+	{	ProgressBar progress( "Saving", used.count() );
+		for( auto layer : used ){
+			QString name = QString( "data/%1.%2" ).arg( layer ).arg( format.ext() );
+			files.append( { name, primitives[layer].to_byte_array( format ) } );
+			progress.update();
+		}
 	}
 	
 	//Create stack

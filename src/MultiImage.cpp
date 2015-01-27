@@ -18,6 +18,7 @@
 #include "MultiImage.hpp"
 #include "OraSaver.hpp"
 #include "Converter.hpp"
+#include "ProgressBar.hpp"
 
 #include <climits>
 #include <iostream>
@@ -83,51 +84,6 @@ void add_converter( QList<Converter>& used_converters, QList<QList<int>>& frames
 	
 	add_converter( used_converters, frames, converters, amount );
 }
-
-/** Creates a progress bar on stdout with a title. Scope is used to stop the
- *  progress bar, do not output anything to stdout until the destructor is
- *  called */
-class ProgressBar{
-	private:
-		int amount;
-		int size;
-		int count{ 0 };
-		int written{ 0 };
-		
-	public:
-		/** Create the progress bar
-		 *  
-		 *  \param [in] msg A title to be displayed together with the progress
-		 *  \param [in] amount The amount of task to be done
-		 *  \param [in] size The width of the progress bar
-		 */
-		ProgressBar( std::string msg, int amount, int size=60 ) : amount(amount), size(size){
-			//Print slightly fancy header with centered text
-			msg += " (" + std::to_string( amount ) + ")";
-			int left = size - msg.size();
-			
-			for( int i=0; i<size; i++ )
-				std::cout << "_";
-			
-			std::cout << std::endl << "|";
-			for( int i=1; i<left/2; i++ )
-				std::cout << " ";
-			std::cout << msg;
-			for( int i=1; i<left-left/2; i++ )
-				std::cout << " ";
-			std::cout << "|" << std::endl;
-		}
-		/** Stops and closes the progress bar */
-		~ProgressBar(){ std::cout << std::endl; }
-		
-		/** Advance the progress
-		 * \param [in] progress How much progress that have been made
-		 */
-		void update( int progress=1 ){
-			for( count += progress; written < count*size/amount; written++ )
-				std::cout << "X";
-		}
-};
 
 /** Create an efficient composite version and save it to a cgCompress file.
  *  \param [in] name File path for the output file, without the extension
