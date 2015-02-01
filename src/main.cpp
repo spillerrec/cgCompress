@@ -140,7 +140,7 @@ int main( int argc, char* argv[] ){
 	else if( options.contains( "--recompress" ) ){
 		for( auto file : files ){
 			auto images = extract_files( file );
-			QString name( QFileInfo(file).baseName() + ".recompressed" );
+			QString name( QFileInfo(file).completeBaseName() + ".recompressed" );
 			
 			MultiImage multi_img( format );
 			for( auto image : images )
@@ -170,6 +170,6 @@ int main( int argc, char* argv[] ){
 		if( options.contains( "--noalpha" ) )
 			multi_img.removeAlpha();
 		
-		return optimizeImage( multi_img, QFileInfo(files[0]).baseName() );
+		return optimizeImage( multi_img, QFileInfo(files[0]).completeBaseName() );
 	}
 }
