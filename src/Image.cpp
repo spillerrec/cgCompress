@@ -171,12 +171,8 @@ Image Image::difference( Image input ) const{
 		QRgb* out = (QRgb*)output.scanLine( iy );
 		const QRgb* in = (const QRgb*)input.img.constScanLine( iy );
 		for( int ix=0; ix<output.width(); ix++ ){
-			if( qAlpha( in[ix] ) == 255 && qAlpha( out[ix] ) == 255 ){
-				if( in[ix] == out[ix] )
-					out[ix] = qRgba( qRed(in[ix]),qGreen(in[ix]),qBlue(in[ix]),0 );
-				else
-					out[ix] = in[ix];
-			}
+			if( in[ix] == out[ix] )
+				out[ix] = qRgba( qRed(in[ix]),qGreen(in[ix]),qBlue(in[ix]),0 );
 			else
 				out[ix] = in[ix];
 		}
