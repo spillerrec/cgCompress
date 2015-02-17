@@ -143,7 +143,7 @@ void OraSaver::save( QString path, Format format ) const{
 		
 		for( auto layer : boost::adaptors::reverse(frame.layers) ){
 			QString name = QString( "data/%1.%2" ).arg( layer ).arg( format.ext() );
-			stack += QString( "<layer name=\"%1\" src=\"%1\" x=\"%2\" y=\"%3\" />" )
+			stack += QString( "<layer composite-op=\"cgcompress:alpha-replace\" name=\"%1\" src=\"%1\" x=\"%2\" y=\"%3\" />" )
 				.arg( name ).arg( primitives[layer].get_pos().x() ).arg( primitives[layer].get_pos().y() );
 		}
 		

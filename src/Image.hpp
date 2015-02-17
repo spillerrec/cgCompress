@@ -27,6 +27,7 @@ class Image {
 	private:
 		QPoint pos;
 		QImage img;
+		QImage mask;
 		
 	public:
 		/** \param [in] path Load the image at **path** on the file system */
@@ -35,6 +36,8 @@ class Image {
 		/** \param [in] pos Offset of the image
 		 *  \param [in] img The image data */
 		Image( QPoint pos, QImage img ) : pos(pos), img(img) { }
+		
+		Image( QPoint pos, QImage img, QImage mask ) : pos(pos), img(img), mask(mask) { }
 		
 		/** \return true if the image is valid */
 		bool is_valid() const{ return !img.size().isEmpty(); }
@@ -74,7 +77,7 @@ class Image {
 		 *  \param [in] height The height to include
 		 *  \return The clipped image */
 		Image sub_image( int x, int y, int width, int height ) const{
-			return Image( pos+QPoint(x,y), img.copy( x,y, width,height ) );
+			return Image( pos+QPoint(x,y), img.copy( x,y, width,height ), mask.copy( x,y, width,height ) );
 		}
 		
 		QList<Image> segment() const;

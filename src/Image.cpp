@@ -24,6 +24,9 @@
 
 using namespace std;
 
+const auto TRANS_SET = qRgba( 255, 0, 255, 0 );
+const auto TRANS_NONE = qRgba( 0, 0, 0, 0 );
+
 /** Create a resized version of this image, will keep aspect ratio
  *  \param [in] size Maximum dimensions of the resized image
  *  \return The resized image */
@@ -147,7 +150,7 @@ Image Image::combine( Image on_top ) const{
 	painter.drawImage( pos-tl, img );
 	painter.drawImage( on_top.pos-tl, on_top.img );
 	
-	return Image( tl, output );
+	return Image( tl, output, mask ); //TODO:
 }
 
 /** Paint another image on top of this one, modifying the image in-place.
@@ -166,19 +169,25 @@ Image Image::difference( Image input ) const{
 	//TODO: images must be the same size and at same point
 	
 	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
+	QImage mask( output );
 	
 	for( int iy=0; iy<output.height(); iy++ ){
 		QRgb* out = (QRgb*)output.scanLine( iy );
+		QRgb* out_mask = (QRgb*)mask.scanLine( iy );
 		const QRgb* in = (const QRgb*)input.img.constScanLine( iy );
 		for( int ix=0; ix<output.width(); ix++ ){
-			if( in[ix] == out[ix] )
+			if( in[ix] == out[ix] ){
 				out[ix] = qRgba( qRed(in[ix]),qGreen(in[ix]),qBlue(in[ix]),0 );
-			else
+				out_mask[ix] = TRANS_SET;;
+			}
+			else{
 				out[ix] = in[ix];
+				out_mask[ix] = TRANS_NONE;
+			}
 		}
 	}
 	
-	return Image( {0,0}, output );
+	return Image( {0,0}, output, mask );
 }
 
 /** Checks if another image reduces the difference
@@ -248,7 +257,7 @@ Image Image::contain_both( Image input ) const{
 		}
 	}
 	
-	return Image( {0,0}, output );
+	return Image( {0,0}, output, mask ); //TODO: actually do mask thing
 }
 
 /** Dilate the alpha channel to reduce salt&pepper noise
@@ -285,7 +294,7 @@ Image Image::clean_alpha( int kernel_size, int threshold ) const{
 				out[ix] = in[ix];
 	}
 			
-	return Image( pos, output );
+	return Image( pos, output, mask ); //TODO: make sure mask we don't need to do something special
 }
 
 /** \return This image where all transparent pixels are set to transparent black **/
@@ -293,25 +302,24 @@ Image Image::remove_transparent() const{
 	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
 	
 	for( int iy=0; iy<output.height(); iy++ ){
-		QRgb* out = (QRgb*)output.scanLine( iy );
+		auto out = (QRgb*)output.scanLine( iy );
+		auto out_mask = mask.isNull() ? nullptr : (const QRgb*)mask.constScanLine( iy );
+			
 		for( int ix=0; ix<output.width(); ix++ )
 			if( qAlpha( out[ix] ) == 0 )
-				out[ix] = qRgba( 0,0,0,0 );
+				out[ix] = out_mask ? out_mask[ix] : TRANS_NONE;
 	}
 			
-	return Image( pos, output );
+	return Image( pos, output, mask );
 }
 
-/** \return This image, but with image data cropped to only contain non-transparent areas */
-Image Image::auto_crop() const{
-	int right=0, left=0;
-	int top=0, bottom=0;
-	
+template<typename Func>
+void find_auto_crop( QImage img, int &right, int &left, int &top, int &bottom, Func f ){
 	//Decrease top
 	for( ; top<img.height(); top++ ){
 		const QRgb* row = (const QRgb*)img.constScanLine( top );
 		for( int ix=0; ix<img.width(); ix++ )
-			if( qAlpha( row[ix] ) != 0 )
+			if( f( row[ix] ) )
 				goto TOP_BREAK;
 	}
 TOP_BREAK:
@@ -320,7 +328,7 @@ TOP_BREAK:
 	for( ; bottom<img.height(); bottom++ ){
 		const QRgb* row = (const QRgb*)img.constScanLine( img.height()-1-bottom );
 		for( int ix=0; ix<img.width(); ix++ )
-			if( qAlpha( row[ix] ) != 0 )
+			if( f( row[ix] ) )
 				goto BOTTOM_BREAK;
 	}
 BOTTOM_BREAK:
@@ -328,16 +336,34 @@ BOTTOM_BREAK:
 	//Decrease left
 	for( ; left<img.width(); left++ )
 		for( int iy=0; iy<img.height(); iy++ )
-			if( qAlpha( img.pixel(left,iy) ) != 0 )
+			if( f( img.pixel(left,iy) ) )
 				goto LEFT_BREAK;
 LEFT_BREAK:
 	
 	//Decrease right
 	for( ; right<img.width(); right++ )
 		for( int iy=0; iy<img.height(); iy++ )
-			if( qAlpha( img.pixel(img.width()-1-right,iy) ) != 0 )
+			if( f( img.pixel(img.width()-1-right,iy) ) )
 				goto RIGHT_BREAK;
 RIGHT_BREAK:
+	return; //Whaat...
+}
+
+/** \return This image, but with image data cropped to only contain non-transparent areas */
+Image Image::auto_crop() const{
+	int right=0, left=0;
+	int top=0, bottom=0;
+	find_auto_crop( img, right, left, top, bottom, [](unsigned i){ return qAlpha(i) != 0; } );
+	
+	if( !mask.isNull() ){
+		int right2=0, left2=0;
+		int top2=0, bottom2=0;
+		find_auto_crop( mask, right2, left2, top2, bottom2, [](unsigned i){ return i != TRANS_SET; } );
+		right  = min( right,  right2 );
+		left   = min( left,   left2 );
+		top    = min( top,    top2 );
+		bottom = min( bottom, bottom2 );
+	}
 	
 	return sub_image( left,top, img.width()-left-right, img.height()-top-bottom );
 }
@@ -383,10 +409,11 @@ Image Image::optimize_filesize( Format format ) const{
  *  \param [in] format Format used for compression
  *  \return Optimized image */
 Image Image::optimize_filesize_blocks( Format format ) const{
+	return this->remove_transparent();
 	auto copy = *this;
 	for( int iy=0; iy<img.height(); iy+=8 )
 		for( int ix=0; ix<img.width(); ix+=8 ){
-			auto block = copy.sub_image( ix, iy, 8, 8 ).optimize_filesize( format );
+			auto block = copy.sub_image( ix, iy, 8, 8 );//.optimize_filesize( format );
 			copy.combineInplace( block );
 		}
 	
