@@ -158,8 +158,19 @@ Image Image::combine( Image on_top ) const{
  *  \param [in] on_top Image to paint
  *  \return The combined image */
 void Image::combineInplace( Image on_top ){
-	QPainter painter( &img );
-	painter.drawImage( on_top.pos-pos, on_top.img );
+	//QPainter painter( &img );
+	//painter.drawImage( on_top.pos-pos, on_top.img );
+	
+	auto offset = on_top.pos - pos;
+	for( int iy=0; iy<on_top.img.height(); iy++ ){
+		if( iy + offset.y() >= img.height() )
+			break;
+		
+		auto in  = (const QRgb*) on_top.img.constScanLine( iy );
+		auto out = (      QRgb*)        img.     scanLine( iy + offset.y() );
+		for( int ix=0; ix<on_top.img.width() && ix+offset.x() < img.width(); ix++ )
+			out[ix + offset.x()] = in[ix];
+	}
 }
 
 /** The difference between the two images
@@ -178,7 +189,7 @@ Image Image::difference( Image input ) const{
 		for( int ix=0; ix<output.width(); ix++ ){
 			if( in[ix] == out[ix] ){
 				out[ix] = qRgba( qRed(in[ix]),qGreen(in[ix]),qBlue(in[ix]),0 );
-				out_mask[ix] = TRANS_SET;;
+				out_mask[ix] = TRANS_SET;
 			}
 			else{
 				out[ix] = in[ix];
@@ -409,11 +420,10 @@ Image Image::optimize_filesize( Format format ) const{
  *  \param [in] format Format used for compression
  *  \return Optimized image */
 Image Image::optimize_filesize_blocks( Format format ) const{
-	return this->remove_transparent();
 	auto copy = *this;
 	for( int iy=0; iy<img.height(); iy+=8 )
 		for( int ix=0; ix<img.width(); ix+=8 ){
-			auto block = copy.sub_image( ix, iy, 8, 8 );//.optimize_filesize( format );
+			auto block = copy.sub_image( ix, iy, 8, 8 ).optimize_filesize( format );
 			copy.combineInplace( block );
 		}
 	
