@@ -24,6 +24,8 @@
 
 using namespace std;
 
+//static int guid = 0; //For saving debug images
+
 const auto TRANS_SET = qRgba( 255, 0, 255, 0 );
 const auto TRANS_NONE = qRgba( 0, 0, 0, 0 );
 
@@ -87,9 +89,10 @@ QList<Image> Image::segment() const{
 Image Image::remove_alpha() const{
 	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
 	
-	for( int iy=0; iy<output.height(); iy++ ){
+	auto size = output.size();
+	for( int iy=0; iy<size.height(); iy++ ){
 		QRgb* out = (QRgb*)output.scanLine( iy );
-		for( int ix=0; ix<output.width(); ix++ )
+		for( int ix=0; ix<size.width(); ix++ )
 			if( qAlpha( out[ix] ) == 0 )
 				out[ix] = qRgba( qRed(out[ix]),qGreen(out[ix]),qBlue(out[ix]),255 );
 	}
@@ -170,13 +173,13 @@ void Image::combineInplace( Image on_top ){
 	//painter.drawImage( on_top.pos-pos, on_top.img );
 	
 	auto offset = on_top.pos - pos;
-	for( int iy=0; iy<on_top.img.height(); iy++ ){
-		if( iy + offset.y() >= img.height() )
+	for( int iy=0; iy<on_top.mask.height(); iy++ ){
+		if( iy + offset.y() >= mask.height() )
 			break;
 		
-		auto in  = (const QRgb*) on_top.img.constScanLine( iy );
-		auto out = (      QRgb*)        img.     scanLine( iy + offset.y() );
-		for( int ix=0; ix<on_top.img.width() && ix+offset.x() < img.width(); ix++ )
+		auto in  = on_top.mask.constScanLine( iy );
+		auto out =        mask.     scanLine( iy + offset.y() );
+		for( int ix=0; ix<on_top.mask.width() && ix+offset.x() < mask.width(); ix++ )
 			out[ix + offset.x()] = in[ix];
 	}
 }
@@ -188,6 +191,9 @@ Image Image::difference( Image input ) const{
 	//TODO: images must be the same size and at same point
 	
 	QImage mask( img.size(), QImage::Format_Indexed8 );
+	mask.setColor( PIXEL_MATCH, qRgb(255, 0, 0) );
+	mask.setColor( PIXEL_DIFFERENT, qRgb(0, 255, 0) );
+	mask.setColor( PIXEL_SHARED, qRgb(0, 0, 255) );
 	
 	for( int iy=0; iy<img.height(); iy++ ){
 		auto out      = (const QRgb*)      img.constScanLine( iy );
@@ -206,6 +212,8 @@ Image Image::difference( Image input ) const{
  *  \return An image which contains both images, or an invalid image on failure */
 Image Image::contain_both( Image input ) const{
 	//TODO: images must be the same size and at same point
+	if( mask.isNull() ||input.mask.isNull() )
+		return Image( {0,0}, QImage() );
 	
 	QImage mask_output( mask );
 	
@@ -242,6 +250,11 @@ Image Image::contain_both( Image input ) const{
 		}
 	}
 	
+//	       mask.save( "contain" + QString::number( guid ) + "in1.png" );
+//	input .mask.save( "contain" + QString::number( guid ) + "in2.png" );
+//	mask_output.save( "contain" + QString::number( guid ) + "out.png" );
+//	guid++;
+	
 	return newMask( mask_output );
 }
 
@@ -251,7 +264,56 @@ Image Image::contain_both( Image input ) const{
  *  \return The cleaned image */
 Image Image::clean_alpha( int kernel_size, int threshold ) const{
 	QImage output( mask );
+	int width = output.width(), height = output.height();
 	
+	std::vector<int> line( mask.width(), 0 );
+	int half = kernel_size / 2;
+	
+	//Add/Remove line 'iy' to cache
+	auto add    = [](int& val, unsigned char pix){ val = (pix == PIXEL_DIFFERENT) ? val+1 : val; };
+	auto remove = [](int& val, unsigned char pix){ val = (pix == PIXEL_DIFFERENT) ? val-1 : val; };
+	auto addLine = [&]( int iy ){
+			auto in = mask.constScanLine( iy );
+			for( int ix=0; ix<width; ix++ )
+				add( line[ix], in[ix] );
+		};
+	auto removeLine = [&]( int iy ){
+			auto in = mask.constScanLine( iy );
+			for( int ix=0; ix<width; ix++ )
+				remove( line[ix], in[ix] );
+		};
+	
+	//Initialize cache
+	for( int iy=0; iy<std::min(half,height); iy++ )
+		addLine( iy );
+	
+	for( int iy=0; iy<height; iy++ ){
+		auto out = output.scanLine( iy );
+		auto in  = mask.constScanLine( iy );
+		
+		int kernel = 0;
+		for( int ix=0; ix<std::min(half,width); ix++ )
+			add( kernel, line[ix] );
+		
+		for( int ix=0; ix<width; ix++ ){
+			if( in[ix] == PIXEL_MATCH )
+				if( kernel > threshold )
+					out[ix] = PIXEL_DIFFERENT;
+			
+			if( ix > 0 )
+				remove( kernel, in[ix-1] );
+			if( ix+1 < width )
+				add( kernel, in[ix+1] );
+		}
+		
+		if( iy > 0 )
+			removeLine( iy-1 );
+		if( iy+1 < height )
+			addLine( iy+1 );
+	}
+	
+	
+	/*
 	for( int iy=0; iy<mask.height(); iy++ ){
 		auto out = output.scanLine( iy );
 		auto in  = mask.constScanLine( iy );
@@ -276,6 +338,7 @@ Image Image::clean_alpha( int kernel_size, int threshold ) const{
 			else
 				out[ix] = in[ix];
 	}
+	*/
 			
 	return newMask( output );
 }
@@ -286,12 +349,13 @@ Image Image::remove_transparent() const{
 		return *this;
 	
 	QImage output( img.copy( {pos, mask.size()} ).convertToFormat(QImage::Format_ARGB32) );
+	int width = output.width(), height = output.height();
 	
-	for( int iy=0; iy<output.height(); iy++ ){
+	for( int iy=0; iy<height; iy++ ){
 		auto out = (QRgb*)output.scanLine( iy );
 		auto out_mask = mask.constScanLine( iy );
 			
-		for( int ix=0; ix<output.width(); ix++ )
+		for( int ix=0; ix<width; ix++ )
 			if( out_mask[ix] != PIXEL_DIFFERENT )
 				out[ix] = TRANS_SET;
 	}
@@ -352,24 +416,19 @@ Image Image::auto_crop() const{
  *  \return Optimized image */
 Image Image::optimize_filesize( Format format ) const{
 	//skip images with no transparency
-	unsigned black = 0, white = 0, total = img.width()*img.height();
-	for( int iy=0; iy<img.height(); iy++ ){
-		auto row = (const QRgb*)img.constScanLine( iy );
-		for( int ix=0; ix<img.width(); ix++ ){
-			auto val = qAlpha( row[ix] );
-			if( val == 0 )
-				black++;
-			if( val == 255 )
-				white++;
-		}
+	unsigned changeable = 0;
+	for( int iy=0; iy<mask.height(); iy++ ){
+		auto row = img.constScanLine( iy );
+		for( int ix=0; ix<mask.width(); ix++ )
+			if( row[ix] == PIXEL_MATCH )
+				changeable++;
 	}
+	if( changeable > 0 )
+		return *this;
 	
 	//Start with the basic image
 	Image best = *this;
 	int best_size = best.compressed_size( format, Format::MEDIUM );
-	
-	if( black == total || white == total )
-		return best.remove_transparent();
 	
 	for( int i=0; i<7; i++ )
 		for( int j=0; j<i*i; j++ ){
@@ -381,7 +440,7 @@ Image Image::optimize_filesize( Format format ) const{
 			}
 		}
 	
-	return best.remove_transparent();
+	return best;
 }
 
 /** Minimize file size by cleaning the alpha, using 8x8 blocks to speed up empty areas
@@ -389,6 +448,7 @@ Image Image::optimize_filesize( Format format ) const{
  *  \return Optimized image */
 Image Image::optimize_filesize_blocks( Format format ) const{
 	auto copy = auto_crop();
+	
 	for( int iy=0; iy<copy.mask.height(); iy+=8 )
 		for( int ix=0; ix<copy.mask.width(); ix+=8 ){
 			auto block = copy.sub_image( ix, iy, 8, 8 ).optimize_filesize( format );
