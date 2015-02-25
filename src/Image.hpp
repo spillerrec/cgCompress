@@ -18,6 +18,7 @@
 #ifndef IMAGE_HPP
 #define IMAGE_HPP
 
+#include <QDebug>
 #include <QImage>
 #include <QByteArray>
 
@@ -30,14 +31,27 @@ class Image {
 		QImage mask;
 		
 	public:
-		/** \param [in] path Load the image at **path** on the file system */
-		Image( QString path ) : img( QImage(path).convertToFormat(QImage::Format_ARGB32) ) { }
-		
 		/** \param [in] pos Offset of the image
 		 *  \param [in] img The image data */
 		Image( QPoint pos, QImage img ) : pos(pos), img(img) { }
 		
+		/** \param [in] path Load the image at **path** on the file system */
+		Image( QString path ) : Image( {0,0}, QImage(path).convertToFormat(QImage::Format_ARGB32) ) { }
+		
+	private:
 		Image( QPoint pos, QImage img, QImage mask ) : pos(pos), img(img), mask(mask) { }
+		Image newMask( QImage mask ) const{ return Image( pos, img, mask ); }
+		void combineInplace( Image on_top );
+		/*
+		QList<Image> segment() const;
+		QList<Image> diff_segment( Image diff ) const;*/
+		/** \return true if *this* overlaps *other* */
+		/*bool overlaps( Image other ) const{
+			return QRect( pos, size ).intersects( QRect( other.pos, other.size ) );
+		}
+		QSize size() const{ return mask.isNull() ? img.size() : mask.size(); }
+		*/
+	public:
 		
 		/** \return true if the image is valid */
 		bool is_valid() const{ return !img.size().isEmpty(); }
@@ -63,11 +77,6 @@ class Image {
 		 *  \return The image in compressed form */
 		QByteArray to_byte_array( Format format ) const{ return format.to_byte_array( img ); }
 		
-		/** \return true if *this* overlaps *other* */
-		bool overlaps( Image other ) const{
-			return QRect( pos, img.size() ).intersects( QRect( other.pos, other.img.size() ) );
-		}
-		
 		Image resize( int size ) const;
 		
 		/** Create a clipped version of the image
@@ -77,16 +86,15 @@ class Image {
 		 *  \param [in] height The height to include
 		 *  \return The clipped image */
 		Image sub_image( int x, int y, int width, int height ) const{
-			return Image( pos+QPoint(x,y), img.copy( x,y, width,height ), mask.copy( x,y, width,height ) );
+			QSize newSize( std::min( x+width,  x+mask.width()  ) - x
+			             , std::min( y+height, y+mask.height() ) - y );
+			auto newMask = newSize.isNull() ? mask : mask.copy( x,y, newSize.width(), newSize.height() );
+			return Image( pos+QPoint(x,y), img, newMask );
 		}
 		
-		QList<Image> segment() const;
-		
 		Image remove_alpha() const;
-		QList<Image> diff_segment( Image diff ) const;
 		
 		Image combine( Image on_top ) const;
-		void combineInplace( Image on_top );
 		
 		Image contain_both( Image diff ) const;
 		
@@ -95,11 +103,10 @@ class Image {
 		 *  \param [in] p Precision of the file size calculation
 		 *  \return The size of the image compressed */
 		int compressed_size( Format format, Format::Precision p=Format::HIGH ) const{
-			return format.file_size( img, p );
+			return format.file_size( remove_transparent().img, p );
 		}
 		Image difference( Image img ) const;
 		Image remove_area( Image img ) const;
-		bool reduces_difference( Image original, Image diff ) const;
 		Image clean_alpha( int kernel_size, int threshold ) const;
 		Image remove_transparent() const;
 		Image auto_crop() const;

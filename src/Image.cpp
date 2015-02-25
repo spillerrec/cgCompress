@@ -27,6 +27,10 @@ using namespace std;
 const auto TRANS_SET = qRgba( 255, 0, 255, 0 );
 const auto TRANS_NONE = qRgba( 0, 0, 0, 0 );
 
+const auto PIXEL_DIFFERENT = 0; //Pixel do not match with other image
+const auto PIXEL_MATCH = 1;     //Pixel is the same as other image
+const auto PIXEL_SHARED = 2;    //Pixel is the same, but must not be set as it differ in another image
+
 /** Create a resized version of this image, will keep aspect ratio
  *  \param [in] size Maximum dimensions of the resized image
  *  \return The resized image */
@@ -46,6 +50,7 @@ static bool content_in_vertical_line( QImage img, int x ){
 
 /** Segment the image into several separate images, based on the alpha channel
  *  \return List of images which can be combined to into this image */
+/*
 QList<Image> Image::segment() const{
 	QList<Image> images;
 	
@@ -76,6 +81,7 @@ QList<Image> Image::segment() const{
 	
 	return images;
 }
+*/
 
 /** \return This image where all transparent pixels are set to #000000 */
 Image Image::remove_alpha() const{
@@ -110,6 +116,7 @@ Image Image::remove_area( Image input ) const{
  *  \todo explain this better
  *  \param [in] diff The image used for differencing
  *  \return The segmented images */
+/*
 QList<Image> Image::diff_segment( Image diff ) const{
 	if( !overlaps( diff ) )
 		return QList<Image>() << *this << diff;
@@ -135,6 +142,7 @@ QList<Image> Image::diff_segment( Image diff ) const{
 //		new_diffs[i].save( QString( "diff %1.png" ).arg( i ) );
 	return new_diffs;
 }
+*/
 
 /** Paint another image on top of this one
  *  \param [in] on_top Image to paint
@@ -150,7 +158,7 @@ Image Image::combine( Image on_top ) const{
 	painter.drawImage( pos-tl, img );
 	painter.drawImage( on_top.pos-tl, on_top.img );
 	
-	return Image( tl, output, mask ); //TODO:
+	return Image( tl, output ); //TODO:
 }
 
 /** Paint another image on top of this one, modifying the image in-place.
@@ -179,69 +187,19 @@ void Image::combineInplace( Image on_top ){
 Image Image::difference( Image input ) const{
 	//TODO: images must be the same size and at same point
 	
-	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
-	QImage mask( output );
+	QImage mask( img.size(), QImage::Format_Indexed8 );
 	
-	for( int iy=0; iy<output.height(); iy++ ){
-		QRgb* out = (QRgb*)output.scanLine( iy );
-		QRgb* out_mask = (QRgb*)mask.scanLine( iy );
-		const QRgb* in = (const QRgb*)input.img.constScanLine( iy );
-		for( int ix=0; ix<output.width(); ix++ ){
-			if( in[ix] == out[ix] ){
-				out[ix] = qRgba( qRed(in[ix]),qGreen(in[ix]),qBlue(in[ix]),0 );
-				out_mask[ix] = TRANS_SET;
-			}
-			else{
-				out[ix] = in[ix];
-				out_mask[ix] = TRANS_NONE;
-			}
-		}
+	for( int iy=0; iy<img.height(); iy++ ){
+		auto out      = (const QRgb*)      img.constScanLine( iy );
+		auto in       = (const QRgb*)input.img.constScanLine( iy );
+		auto out_mask = mask.scanLine( iy );
+		for( int ix=0; ix<img.width(); ix++ )
+			out_mask[ix] = (in[ix] == out[ix]) ? PIXEL_MATCH : PIXEL_DIFFERENT;
 	}
 	
-	return Image( {0,0}, output, mask );
+	return input.newMask( mask );
 }
 
-/** Checks if another image reduces the difference
- *  \todo Is this used anymore?
- *  \param [in] original The image wanted
- *  \param [in] diff The additional image to reduce difference
- *  \return true if *diff* reduces the difference */
-bool Image::reduces_difference( Image original, Image diff ) const{
-	//TODO: this and original must be larger than diff
-	int balance = 0;
-	int count = 0;
-	
-	int width = diff.pos.x() + diff.img.width();
-	int height = diff.pos.y() + diff.img.height();
-	for( int iy=diff.pos.y(); iy<height; iy++ ){
-		const QRgb* base = (const QRgb*)         img.constScanLine( iy-pos.y() )          -          pos.x();
-		const QRgb* org =  (const QRgb*)original.img.constScanLine( iy-original.pos.y() ) - original.pos.x();
-		const QRgb* over = (const QRgb*)diff    .img.constScanLine( iy-diff.pos.y() )     -     diff.pos.x();
-		
-		for( int ix=diff.pos.x(); ix<width; ix++ ){
-			if( qAlpha( over[ix] ) > 0 )
-				count++;
-			if( base[ix] != over[ix] ){
-				if( qAlpha( over[ix] ) == 255 ){
-					if( base[ix] == org[ix] )
-						balance--;
-					else if( over[ix] == org[ix] )
-						balance++;
-				}
-			}
-			//TODO: support 1-254 alpha
-		}
-	}
-	
-	return balance > count*0.0;
-}
-
-static bool color_equal( QRgb c1, QRgb c2 ){
-	return qRed( c1 ) == qRed( c2 )
-		&&	qGreen( c1 ) == qGreen( c2 )
-		&&	qBlue( c1 ) == qBlue( c2 )
-		;
-}
 
 /** Try to reset alpha to find an image which can simulate both images
  *  \param [in] input Another image
@@ -249,26 +207,42 @@ static bool color_equal( QRgb c1, QRgb c2 ){
 Image Image::contain_both( Image input ) const{
 	//TODO: images must be the same size and at same point
 	
-	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
+	QImage mask_output( mask );
 	
-	for( int iy=0; iy<output.height(); iy++ ){
-		QRgb* out = (QRgb*)output.scanLine( iy );
-		const QRgb* in = (const QRgb*)input.img.constScanLine( iy );
-		for( int ix=0; ix<output.width(); ix++ ){
-			if( qAlpha( in[ix] ) == 255 || qAlpha( out[ix] ) == 255 ){
-				if( !color_equal( in[ix], out[ix] ) )
-					return Image( {0,0}, QImage() ); //Can't contain both!
-				else
-					out[ix] = qRgba( qRed(out[ix]), qGreen(out[ix]), qBlue(out[ix]), 255 );
+	for( int iy=0; iy<mask.height(); iy++ ){
+		auto in1 = (const QRgb*)      img.constScanLine( iy +       pos.y() ) +       pos.x();
+		auto in2 = (const QRgb*)input.img.constScanLine( iy + input.pos.y() ) + input.pos.x();
+		
+		auto mask1 =       mask.constScanLine( iy );
+		auto mask2 = input.mask.constScanLine( iy );
+		auto mask_out = mask_output.scanLine( iy );
+		
+		for( int ix=0; ix<mask.width(); ix++ ){
+			auto pix1 = mask1[ix];
+			auto pix2 = mask2[ix];
+			auto& out = mask_out[ix];
+			
+			if( in1[ix] != in2[ix] ){
+				//Pixel cannot be shared
+				if( pix1 == PIXEL_DIFFERENT || pix2 == PIXEL_DIFFERENT )
+					return Image( {0,0}, QImage() );
+				
+				out = PIXEL_SHARED;
 			}
 			else{
-				if( in[ix] != out[ix] )
-					out[ix] = qRgba( 0,0,0,0 );
+				if( pix1 == pix2 ) //No need to change
+					out = pix1;
+				else if( pix1 == PIXEL_MATCH ) //Other is the more specific
+					out = pix2;
+				else if( pix2 == PIXEL_MATCH ) //Other is the more specific
+					out = pix1;
+				else //One is shared, other is set, not allowed
+					return Image( {0,0}, QImage() );
 			}
 		}
 	}
 	
-	return Image( {0,0}, output, mask ); //TODO: actually do mask thing
+	return newMask( mask_output );
 }
 
 /** Dilate the alpha channel to reduce salt&pepper noise
@@ -276,28 +250,26 @@ Image Image::contain_both( Image input ) const{
  *  \param [in] threshold How many pixels in the area must be set to enable this pixel
  *  \return The cleaned image */
 Image Image::clean_alpha( int kernel_size, int threshold ) const{
-	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
+	QImage output( mask );
 	
-	for( int iy=0; iy<output.height(); iy++ ){
-		QRgb* out = (QRgb*)output.scanLine( iy );
-		const QRgb* in = (const QRgb*)img.constScanLine( iy );
-		for( int ix=0; ix<output.width(); ix++ )
-			if( qAlpha( in[ix] ) == 0 ){
-				out[ix] = qRgba( 0,0,0,0 );
-				
+	for( int iy=0; iy<mask.height(); iy++ ){
+		auto out = output.scanLine( iy );
+		auto in  = mask.constScanLine( iy );
+		for( int ix=0; ix<mask.width(); ix++ )
+			if( in[ix] == PIXEL_MATCH ){
 				int amount = 0;
 				int half = kernel_size / 2;
 				int x_start = max( ix-half, 0 );
-				int x_end = min( ix+kernel_size-half, img.width() );
+				int x_end = min( ix+kernel_size-half, mask.width() );
 				int y_start = max( iy-half, 0 );
-				int y_end = min( iy+kernel_size-half, img.height() );
+				int y_end = min( iy+kernel_size-half, mask.height() );
 				for( int jy=y_start; jy<y_end; jy++ )
 					for( int jx=x_start; jx<x_end; jx++ )
-						if( qAlpha( img.pixel(jx,jy) ) == 255 )
+						if( mask.pixelIndex(jx,jy) == PIXEL_DIFFERENT )
 							amount++;
 				
 				if( amount > threshold )
-					out[ix] = qRgba( qRed(in[ix]), qGreen(in[ix]), qBlue(in[ix]), 255 );
+					out[ix] = PIXEL_DIFFERENT;
 				else
 					out[ix] = in[ix];
 			}
@@ -305,30 +277,33 @@ Image Image::clean_alpha( int kernel_size, int threshold ) const{
 				out[ix] = in[ix];
 	}
 			
-	return Image( pos, output, mask ); //TODO: make sure mask we don't need to do something special
+	return newMask( output );
 }
 
 /** \return This image where all transparent pixels are set to transparent black **/
 Image Image::remove_transparent() const{
-	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
+	if( mask.isNull() )
+		return *this;
+	
+	QImage output( img.copy( {pos, mask.size()} ).convertToFormat(QImage::Format_ARGB32) );
 	
 	for( int iy=0; iy<output.height(); iy++ ){
 		auto out = (QRgb*)output.scanLine( iy );
-		auto out_mask = mask.isNull() ? nullptr : (const QRgb*)mask.constScanLine( iy );
+		auto out_mask = mask.constScanLine( iy );
 			
 		for( int ix=0; ix<output.width(); ix++ )
-			if( qAlpha( out[ix] ) == 0 )
-				out[ix] = out_mask ? out_mask[ix] : TRANS_NONE;
+			if( out_mask[ix] != PIXEL_DIFFERENT )
+				out[ix] = TRANS_SET;
 	}
 			
-	return Image( pos, output, mask );
+	return Image( pos, output );
 }
 
 template<typename Func>
 void find_auto_crop( QImage img, int &right, int &left, int &top, int &bottom, Func f ){
 	//Decrease top
 	for( ; top<img.height(); top++ ){
-		const QRgb* row = (const QRgb*)img.constScanLine( top );
+		auto row = img.constScanLine( top );
 		for( int ix=0; ix<img.width(); ix++ )
 			if( f( row[ix] ) )
 				goto TOP_BREAK;
@@ -337,7 +312,7 @@ TOP_BREAK:
 	
 	//Decrease bottom
 	for( ; bottom<img.height(); bottom++ ){
-		const QRgb* row = (const QRgb*)img.constScanLine( img.height()-1-bottom );
+		auto row = img.constScanLine( img.height()-1-bottom );
 		for( int ix=0; ix<img.width(); ix++ )
 			if( f( row[ix] ) )
 				goto BOTTOM_BREAK;
@@ -347,14 +322,14 @@ BOTTOM_BREAK:
 	//Decrease left
 	for( ; left<img.width(); left++ )
 		for( int iy=0; iy<img.height(); iy++ )
-			if( f( img.pixel(left,iy) ) )
+			if( f( img.pixelIndex(left,iy) ) )
 				goto LEFT_BREAK;
 LEFT_BREAK:
 	
 	//Decrease right
 	for( ; right<img.width(); right++ )
 		for( int iy=0; iy<img.height(); iy++ )
-			if( f( img.pixel(img.width()-1-right,iy) ) )
+			if( f( img.pixelIndex(img.width()-1-right,iy) ) )
 				goto RIGHT_BREAK;
 RIGHT_BREAK:
 	return; //Whaat...
@@ -362,19 +337,12 @@ RIGHT_BREAK:
 
 /** \return This image, but with image data cropped to only contain non-transparent areas */
 Image Image::auto_crop() const{
+	if( mask.isNull() )
+		return *this;
+	
 	int right=0, left=0;
 	int top=0, bottom=0;
-	find_auto_crop( img, right, left, top, bottom, [](unsigned i){ return qAlpha(i) != 0; } );
-	
-	if( !mask.isNull() ){
-		int right2=0, left2=0;
-		int top2=0, bottom2=0;
-		find_auto_crop( mask, right2, left2, top2, bottom2, [](unsigned i){ return i != TRANS_SET; } );
-		right  = min( right,  right2 );
-		left   = min( left,   left2 );
-		top    = min( top,    top2 );
-		bottom = min( bottom, bottom2 );
-	}
+	find_auto_crop( mask, right, left, top, bottom, [](unsigned i){ return i == PIXEL_DIFFERENT; } );
 	
 	return sub_image( left,top, img.width()-left-right, img.height()-top-bottom );
 }
@@ -397,15 +365,15 @@ Image Image::optimize_filesize( Format format ) const{
 	}
 	
 	//Start with the basic image
-	Image best = remove_transparent();
+	Image best = *this;
 	int best_size = best.compressed_size( format, Format::MEDIUM );
 	
 	if( black == total || white == total )
-		return best;
+		return best.remove_transparent();
 	
 	for( int i=0; i<7; i++ )
 		for( int j=0; j<i*i; j++ ){
-			Image current = clean_alpha( i, j ).remove_transparent();
+			Image current = clean_alpha( i, j );
 			int size = current.compressed_size( format, Format::MEDIUM );
 			if( size < best_size ){
 				best_size = size;
@@ -413,21 +381,21 @@ Image Image::optimize_filesize( Format format ) const{
 			}
 		}
 	
-	return best;
+	return best.remove_transparent();
 }
 
 /** Minimize file size by cleaning the alpha, using 8x8 blocks to speed up empty areas
  *  \param [in] format Format used for compression
  *  \return Optimized image */
 Image Image::optimize_filesize_blocks( Format format ) const{
-	auto copy = *this;
-	for( int iy=0; iy<img.height(); iy+=8 )
-		for( int ix=0; ix<img.width(); ix+=8 ){
+	auto copy = auto_crop();
+	for( int iy=0; iy<copy.mask.height(); iy+=8 )
+		for( int ix=0; ix<copy.mask.width(); ix+=8 ){
 			auto block = copy.sub_image( ix, iy, 8, 8 ).optimize_filesize( format );
 			copy.combineInplace( block );
 		}
 	
-	return copy;
+	return copy.remove_transparent();
 }
 
 
