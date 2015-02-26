@@ -415,24 +415,26 @@ Image Image::auto_crop() const{
  *  \param [in] format Format used for compression
  *  \return Optimized image */
 Image Image::optimize_filesize( Format format ) const{
+	auto copy = auto_crop();
+	
 	//skip images with no transparency
 	unsigned changeable = 0;
-	for( int iy=0; iy<mask.height(); iy++ ){
-		auto row = img.constScanLine( iy );
-		for( int ix=0; ix<mask.width(); ix++ )
+	for( int iy=0; iy<copy.mask.height(); iy++ ){
+		auto row = copy.mask.constScanLine( iy );
+		for( int ix=0; ix<copy.mask.width(); ix++ )
 			if( row[ix] == PIXEL_MATCH )
 				changeable++;
 	}
 	if( changeable > 0 )
-		return *this;
+		return copy.remove_transparent();
 	
 	//Start with the basic image
-	Image best = *this;
+	Image best = copy;
 	int best_size = best.compressed_size( format, Format::MEDIUM );
 	
 	for( int i=0; i<7; i++ )
 		for( int j=0; j<i*i; j++ ){
-			Image current = clean_alpha( i, j );
+			Image current = copy.clean_alpha( i, j );
 			int size = current.compressed_size( format, Format::MEDIUM );
 			if( size < best_size ){
 				best_size = size;
@@ -440,22 +442,6 @@ Image Image::optimize_filesize( Format format ) const{
 			}
 		}
 	
-	return best;
+	return best.remove_transparent();
 }
-
-/** Minimize file size by cleaning the alpha, using 8x8 blocks to speed up empty areas
- *  \param [in] format Format used for compression
- *  \return Optimized image */
-Image Image::optimize_filesize_blocks( Format format ) const{
-	auto copy = auto_crop();
-	
-	for( int iy=0; iy<copy.mask.height(); iy+=8 )
-		for( int ix=0; ix<copy.mask.width(); ix+=8 ){
-			auto block = copy.sub_image( ix, iy, 8, 8 ).optimize_filesize( format );
-			copy.combineInplace( block );
-		}
-	
-	return copy.remove_transparent();
-}
-
 

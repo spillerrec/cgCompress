@@ -182,8 +182,7 @@ bool MultiImage::optimize( QString name ) const{
 	{	ProgressBar progress( "Optimizing images", final_primitives.size()-1 );
 		for( int i=1; i<final_primitives.size(); i++, progress.update() )
 			if( final_primitives[i].is_valid() )
-				final_primitives[i] = final_primitives[i].auto_crop().optimize_filesize( format ).remove_transparent();
-			//	final_primitives[i] = final_primitives[i].optimize_filesize_blocks( format );
+				final_primitives[i] = final_primitives[i].optimize_filesize( format );
 	}
 	
 	OraSaver( final_primitives, final_frames ).save( name + ".cgcompress", format );

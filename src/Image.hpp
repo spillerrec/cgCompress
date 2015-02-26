@@ -111,7 +111,6 @@ class Image {
 		Image auto_crop() const;
 		
 		Image optimize_filesize( Format format ) const;
-		Image optimize_filesize_blocks( Format format ) const;
 		
 		/** \param [in] other Image to compare against
 		 *  \return true if images are interchangeable */
