@@ -41,7 +41,6 @@ class Image {
 	private:
 		Image( QPoint pos, QImage img, QImage mask ) : pos(pos), img(img), mask(mask) { }
 		Image newMask( QImage mask ) const{ return Image( pos, img, mask ); }
-		void combineInplace( Image on_top );
 		/*
 		QList<Image> segment() const;
 		QList<Image> diff_segment( Image diff ) const;*/

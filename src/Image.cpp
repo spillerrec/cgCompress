@@ -164,26 +164,6 @@ Image Image::combine( Image on_top ) const{
 	return Image( tl, output ); //TODO:
 }
 
-/** Paint another image on top of this one, modifying the image in-place.
- *  Must be contained in this image.
- *  \param [in] on_top Image to paint
- *  \return The combined image */
-void Image::combineInplace( Image on_top ){
-	//QPainter painter( &img );
-	//painter.drawImage( on_top.pos-pos, on_top.img );
-	
-	auto offset = on_top.pos - pos;
-	for( int iy=0; iy<on_top.mask.height(); iy++ ){
-		if( iy + offset.y() >= mask.height() )
-			break;
-		
-		auto in  = on_top.mask.constScanLine( iy );
-		auto out =        mask.     scanLine( iy + offset.y() );
-		for( int ix=0; ix<on_top.mask.width() && ix+offset.x() < mask.width(); ix++ )
-			out[ix + offset.x()] = in[ix];
-	}
-}
-
 /** The difference between the two images
  *  \param [in] input The image to diff on, must have same dimensions
  *  \return The difference */
@@ -311,34 +291,6 @@ Image Image::clean_alpha( int kernel_size, int threshold ) const{
 		if( iy+1 < height )
 			addLine( iy+1 );
 	}
-	
-	
-	/*
-	for( int iy=0; iy<mask.height(); iy++ ){
-		auto out = output.scanLine( iy );
-		auto in  = mask.constScanLine( iy );
-		for( int ix=0; ix<mask.width(); ix++ )
-			if( in[ix] == PIXEL_MATCH ){
-				int amount = 0;
-				int half = kernel_size / 2;
-				int x_start = max( ix-half, 0 );
-				int x_end = min( ix+kernel_size-half, mask.width() );
-				int y_start = max( iy-half, 0 );
-				int y_end = min( iy+kernel_size-half, mask.height() );
-				for( int jy=y_start; jy<y_end; jy++ )
-					for( int jx=x_start; jx<x_end; jx++ )
-						if( mask.pixelIndex(jx,jy) == PIXEL_DIFFERENT )
-							amount++;
-				
-				if( amount > threshold )
-					out[ix] = PIXEL_DIFFERENT;
-				else
-					out[ix] = in[ix];
-			}
-			else
-				out[ix] = in[ix];
-	}
-	*/
 			
 	return newMask( output );
 }
