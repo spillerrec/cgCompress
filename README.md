@@ -34,13 +34,15 @@ Create a cgCompress file from a directory containing an un-zipped cgCompress fil
     --noalpha
 Ignore the alpha channel in the input images. Some CG collections have a small amount of transparency around the edges for no good apparent reason.
 
+    --discard-transparent
+Removes any color value for fully transparent pixels and sets it to black. This can improve compression a bit, but is only visually lossless.
+
 ## Status
 
 - Prof of concept
 - A greedy algorithm have been implemented which is O( n^2 ) instead of O( n^n ), but it does not guaranty optimal solutions. It does however produce pretty good results, but it needs to be evaluated.
 - Segmentation needs to be redone, and done with respect to file size.
 - Some images contain the same image, but with color changes. Some success have been had with alternative composite methods, but still needs to be further investigated.
-- The input images must currently not contain alpha, which means we can't optimize character sprites. Make it work!
 
 ## Output format
 
