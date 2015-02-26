@@ -92,8 +92,6 @@ class Image {
 			return Image( pos+QPoint(x,y), img, newMask );
 		}
 		
-		Image remove_alpha() const;
-		
 		Image combine( Image on_top ) const;
 		
 		Image contain_both( Image diff ) const;
@@ -109,6 +107,7 @@ class Image {
 		Image remove_area( Image img ) const;
 		Image clean_alpha( int kernel_size, int threshold ) const;
 		Image remove_transparent() const;
+		Image discardTransparent() const;
 		Image auto_crop() const;
 		
 		Image optimize_filesize( Format format ) const;

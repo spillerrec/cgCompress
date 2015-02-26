@@ -86,7 +86,7 @@ QList<Image> Image::segment() const{
 */
 
 /** \return This image where all transparent pixels are set to #000000 */
-Image Image::remove_alpha() const{
+Image Image::discardTransparent() const{
 	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
 	
 	auto size = output.size();
@@ -94,7 +94,7 @@ Image Image::remove_alpha() const{
 		QRgb* out = (QRgb*)output.scanLine( iy );
 		for( int ix=0; ix<size.width(); ix++ )
 			if( qAlpha( out[ix] ) == 0 )
-				out[ix] = qRgba( qRed(out[ix]),qGreen(out[ix]),qBlue(out[ix]),255 );
+				out[ix] = qRgba( 0,0,0,0 );
 	}
 			
 	return Image( pos, output );

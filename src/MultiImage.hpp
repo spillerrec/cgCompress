@@ -47,6 +47,9 @@ class MultiImage {
 		
 		/** Remove alpha from input images */
 		void removeAlpha() { for( auto& original : originals ) original.removeAlpha(); }
+		
+		/** Remove alpha from input images */
+		void discardTransparent() { for( auto& original : originals ) original = original.discardTransparent(); }
 };
 
 #endif

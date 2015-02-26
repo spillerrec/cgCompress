@@ -182,8 +182,8 @@ bool MultiImage::optimize( QString name ) const{
 	{	ProgressBar progress( "Optimizing images", final_primitives.size()-1 );
 		for( int i=1; i<final_primitives.size(); i++, progress.update() )
 			if( final_primitives[i].is_valid() )
-			//	final_primitives[i] = final_primitives[i].auto_crop().optimize_filesize( format );
-				final_primitives[i] = final_primitives[i].auto_crop().optimize_filesize_blocks( format );
+				final_primitives[i] = final_primitives[i].auto_crop().optimize_filesize( format ).remove_transparent();
+			//	final_primitives[i] = final_primitives[i].optimize_filesize_blocks( format );
 	}
 	
 	OraSaver( final_primitives, final_frames ).save( name + ".cgcompress", format );
@@ -201,8 +201,14 @@ bool MultiImage::validate( QString file ) const{
 		if( !reader.read( &current ) )
 			return false;
 		
-		if( current.convertToFormat(QImage::Format_ARGB32) != originals[i].qimg().convertToFormat(QImage::Format_ARGB32) )
+		auto img1 = current            .convertToFormat( QImage::Format_ARGB32 );
+		auto img2 = originals[i].qimg().convertToFormat( QImage::Format_ARGB32 );
+		
+		if( img1 != img2 ){
+			img1.save( "error-decoded.png" );
+			img2.save( "error-expected.png" );
 			return false;
+		}
 	}
 	
 	//Fail if there are more images available

@@ -145,9 +145,12 @@ int main( int argc, char* argv[] ){
 			MultiImage multi_img( format );
 			for( auto image : images )
 				multi_img.append( Image( {0,0}, image.second ) );
-		
+			
 			if( options.contains( "--noalpha" ) )
 				multi_img.removeAlpha();
+			
+			if( options.contains( "--discard-transparent" ) )
+				multi_img.discardTransparent();
 			
 			optimizeImage( multi_img, name );
 		}
@@ -169,6 +172,9 @@ int main( int argc, char* argv[] ){
 		
 		if( options.contains( "--noalpha" ) )
 			multi_img.removeAlpha();
+		
+		if( options.contains( "--discard-transparent" ) )
+			multi_img.discardTransparent();
 		
 		return optimizeImage( multi_img, QFileInfo(files[0]).completeBaseName() );
 	}
