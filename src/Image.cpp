@@ -377,7 +377,7 @@ Image Image::optimize_filesize( Format format ) const{
 			if( row[ix] == PIXEL_MATCH )
 				changeable++;
 	}
-	if( changeable > 0 )
+	if( changeable == 0 )
 		return copy.remove_transparent();
 	
 	//Start with the basic image
@@ -394,6 +394,10 @@ Image Image::optimize_filesize( Format format ) const{
 			}
 		}
 	
-	return best.remove_transparent();
+	//Make sure filtering actually improved the situation
+	if( copy.compressed_size( format ) > best.compressed_size( format ) )
+		return best.remove_transparent();
+	else
+		return copy.remove_transparent();
 }
 
