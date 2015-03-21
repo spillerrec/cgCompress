@@ -119,23 +119,25 @@ int main( int argc, char* argv[] ){
 	
 	Format format = get_format( options );
 	
-	if( options.contains( "--help" ) ){
-		print_help();
-		return 0;
-	}
-	else if( options.contains( "--version" ) ){
-		print_version();
-		return 0;
-	}
-	else if( options.contains( "--pack" ) ){
+	auto doMultiImg = [&]( MultiImage& multi_img, QString output_path ){
+			if( options.contains( "--noalpha" ) )
+				multi_img.removeAlpha();
+			
+			if( options.contains( "--discard-transparent" ) )
+				multi_img.discardTransparent();
+			
+			return optimizeImage( multi_img, output_path );
+		};
+	
+	if(      options.contains( "--help"    ) ) print_help();
+	else if( options.contains( "--version" ) ) print_version();
+	else if( options.contains( "--pack"    ) ){
 		for( auto file : files )
 			pack_directory( file );
-		return 0;
 	}
 	else if( options.contains( "--extract" ) ){
 		for( auto file : files )
 			extract_cgcompress( file, format );
-		return 0;
 	}
 	else if( options.contains( "--recompress" ) ){
 		for( auto file : files ){
@@ -146,16 +148,8 @@ int main( int argc, char* argv[] ){
 			for( auto image : images )
 				multi_img.append( Image( {0,0}, image.second ) );
 			
-			if( options.contains( "--noalpha" ) )
-				multi_img.removeAlpha();
-			
-			if( options.contains( "--discard-transparent" ) )
-				multi_img.discardTransparent();
-			
-			optimizeImage( multi_img, name );
+			doMultiImg( multi_img, name );
 		}
-		
-		return 0;
 	}
 	else{
 		if( files.size() < 2 ){
@@ -166,16 +160,24 @@ int main( int argc, char* argv[] ){
 			return -1;
 		}
 		
-		MultiImage multi_img( format );
-		for( auto file : files )
-			multi_img.append( Image( file ) );
-		
-		if( options.contains( "--noalpha" ) )
-			multi_img.removeAlpha();
-		
-		if( options.contains( "--discard-transparent" ) )
-			multi_img.discardTransparent();
-		
-		return optimizeImage( multi_img, QFileInfo(files[0]).completeBaseName() );
+		for( int start=0; start<files.size(); ){
+			MultiImage multi_img( format );
+			
+			QImage last;
+			for( int j=start; j<files.size(); j++ ){
+				QImage current( files[j] );
+				
+				if( options.contains( "--auto" ) && !last.isNull() && !isSimilar( current, last ) )
+					break;
+				
+				multi_img.append( Image( {0,0}, current ) );
+				last = current;
+			}
+			
+			doMultiImg( multi_img, QFileInfo(files[start]).completeBaseName() );
+			start += multi_img.count();
+		}
 	}
+	
+	return 0;
 }

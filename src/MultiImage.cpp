@@ -135,8 +135,7 @@ bool MultiImage::optimize( QString name ) const{
 				Frame f( primitives );
 				f.layers << 0;
 				for( int j=1; j<comb.size(); j++ ){
-					int from = f.layers.last();
-					from = (j == 1) ? best_start : comb[j-1];
+					int from = (j == 1) ? best_start : comb[j-1];
 					for( int i=0; i<used_converters.size(); i++ ){
 						if( from == used_converters[i].get_from() && comb[j] == used_converters[i].get_to() ){
 							f.layers << i+1;

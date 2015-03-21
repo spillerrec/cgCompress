@@ -125,3 +125,20 @@ void pack_directory( QDir dir ){
 	
 	OraSaver::save( dir.dirName() + ".packed.cgcompress", mimetype, stack, files );
 }
+
+bool isSimilar( QImage img1, QImage img2 ){
+	if( img1.size() != img2.size() )
+		return false;
+	
+	int count=0;
+	for( int iy=0; iy<img1.height(); iy++ )
+		for( int ix=0; ix<img1.width(); ix++ )
+			if( img1.pixel( ix, iy ) == img2.pixel( ix, iy ) )
+				count++;
+	
+	double ratio = (double)count / (img1.height() * img2.width());
+	if( ratio >= 0.01 ) //More than 1% of all pixels can be reused
+		return true;
+	
+	return false;
+}

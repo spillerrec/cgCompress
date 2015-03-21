@@ -37,6 +37,8 @@ class MultiImage {
 		 */
 		MultiImage( Format format, QList<Image> originals=QList<Image>() )
 			: format(format), originals(originals){ }
+			
+		int count() const{ return originals.count(); }
 		
 		/** \param [in] original Another image that it is made of */
 		void append( Image original ){ originals.append( original ); }
