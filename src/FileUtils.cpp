@@ -130,13 +130,22 @@ bool isSimilar( QImage img1, QImage img2 ){
 	if( img1.size() != img2.size() )
 		return false;
 	
-	int count=0;
+	int count=0, total=0;
 	for( int iy=0; iy<img1.height(); iy++ )
-		for( int ix=0; ix<img1.width(); ix++ )
-			if( img1.pixel( ix, iy ) == img2.pixel( ix, iy ) )
-				count++;
+		for( int ix=0; ix<img1.width(); ix++ ){
+			auto pix1 = img1.pixel( ix, iy );
+			auto pix2 = img2.pixel( ix, iy );
+			if( qAlpha( pix1 ) != 0 || qAlpha( pix2 ) != 0 ){
+				total++;
+				if( pix1 == pix2 )
+					count++;
+			}
+		}
 	
-	double ratio = (double)count / (img1.height() * img2.width());
+	if( total == 0 )
+		return false;
+	
+	double ratio = (double)count / total;
 	if( ratio >= 0.05 ) //More than 5% of all pixels can be reused
 		return true;
 	
