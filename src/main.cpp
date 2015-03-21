@@ -19,6 +19,7 @@
 #include <QStringList>
 #include <QFileInfo>
 #include <QImageReader>
+#include <QDebug>
 
 #include "Format.hpp"
 #include "MultiImage.hpp"
@@ -152,6 +153,8 @@ int main( int argc, char* argv[] ){
 		}
 	}
 	else{
+		files = expandFolders( files );
+		
 		if( files.size() < 2 ){
 			if( files.size() == 0 )
 				print_help();
@@ -161,6 +164,8 @@ int main( int argc, char* argv[] ){
 		}
 		
 		for( int start=0; start<files.size(); ){
+			auto name = QFileInfo(files[start]).completeBaseName();
+			qDebug() << "Compressing " << name;
 			MultiImage multi_img( format );
 			
 			QImage last;
@@ -174,7 +179,7 @@ int main( int argc, char* argv[] ){
 				last = current;
 			}
 			
-			doMultiImg( multi_img, QFileInfo(files[start]).completeBaseName() );
+			doMultiImg( multi_img, name );
 			start += multi_img.count();
 		}
 	}

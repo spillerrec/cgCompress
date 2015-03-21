@@ -91,10 +91,11 @@ void add_converter( QList<Converter>& used_converters, QList<QList<int>>& frames
  *  \return true on success
  */
 bool MultiImage::optimize( QString name ) const{
-	qDebug() << "Compressing " << name;
-	int base = originals.size() - 1;
+	if( originals.count() <= 0 )
+		return true;
 	
 	QList<Converter> converters;
+	int base = originals.size() - 1;
 	{	ProgressBar progress( "Generating data", base*base + base );
 		for( int i=0; i<originals.size(); i++ )
 			for( int j=i+1; j<originals.size(); j++ ){

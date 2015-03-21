@@ -32,5 +32,7 @@ void pack_directory( QDir dir );
 
 bool isSimilar( QImage img1, QImage img2 );
 
+QStringList expandFolders( QStringList files );
+
 #endif
 

@@ -137,8 +137,22 @@ bool isSimilar( QImage img1, QImage img2 ){
 				count++;
 	
 	double ratio = (double)count / (img1.height() * img2.width());
-	if( ratio >= 0.01 ) //More than 1% of all pixels can be reused
+	if( ratio >= 0.05 ) //More than 5% of all pixels can be reused
 		return true;
 	
 	return false;
+}
+
+QStringList expandFolders( QStringList paths ){
+	QStringList files;
+	
+	for( auto path : paths )
+		if( QFileInfo( path ).isDir() ){
+			for( auto file : QDir( path ).entryList( { "*" }, QDir::Files ) )
+				files << path + "/" + file;
+		}
+		else
+			files << path;
+	
+	return files;
 }
