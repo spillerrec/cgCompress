@@ -39,20 +39,22 @@ class ProgressBar{
 		 *  \param [in] size The width of the progress bar
 		 */
 		ProgressBar( std::string msg, int amount, int size=60 ) : amount(amount), size(size){
-			//Print slightly fancy header with centered text
-			msg += " (" + std::to_string( amount ) + ")";
-			int left = size - msg.size();
-			
-			for( int i=0; i<size; i++ )
-				std::cout << "_";
-			
-			std::cout << std::endl << "|";
-			for( int i=1; i<left/2; i++ )
-				std::cout << " ";
-			std::cout << msg;
-			for( int i=1; i<left-left/2; i++ )
-				std::cout << " ";
-			std::cout << "|" << std::endl;
+			if( amount > 0 ){
+				//Print slightly fancy header with centered text
+				msg += " (" + std::to_string( amount ) + ")";
+				int left = size - msg.size();
+				
+				for( int i=0; i<size; i++ )
+					std::cout << "_";
+				
+				std::cout << std::endl << "|";
+				for( int i=1; i<left/2; i++ )
+					std::cout << " ";
+				std::cout << msg;
+				for( int i=1; i<left-left/2; i++ )
+					std::cout << " ";
+				std::cout << "|" << std::endl;
+			}
 		}
 		/** Stops and closes the progress bar */
 		~ProgressBar(){ std::cout << std::endl; }
