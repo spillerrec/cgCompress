@@ -311,8 +311,10 @@ Image Image::remove_transparent() const{
 			if( out_mask[ix] != PIXEL_DIFFERENT )
 				out[ix] = TRANS_SET;
 	}
-			
-	return Image( pos, output );
+	
+	Image out( pos, output );
+	out.saved_data = saved_data; //This is already with without transparent data
+	return out;
 }
 
 template<typename Func>
@@ -395,7 +397,7 @@ Image Image::optimize_filesize( Format format ) const{
 		}
 	
 	//Make sure filtering actually improved the situation
-	if( copy.compressed_size( format ) > best.compressed_size( format ) )
+	if( copy.save_compressed_size( format ) > best.save_compressed_size( format ) )
 		return best.remove_transparent();
 	else
 		return copy.remove_transparent();

@@ -30,6 +30,8 @@ class Image {
 		QImage img;
 		QImage mask;
 		
+		QByteArray saved_data;
+		
 	public:
 		/** \param [in] pos Offset of the image
 		 *  \param [in] img The image data */
@@ -74,7 +76,8 @@ class Image {
 		/** Save the image to a memory buffer
 		 *  \param [in] format The compression format to use
 		 *  \return The image in compressed form */
-		QByteArray to_byte_array( Format format ) const{ return format.to_byte_array( img ); }
+		QByteArray to_byte_array( Format format ) const
+			{ return saved_data.size() > 0 ? saved_data : format.to_byte_array( img ); }
 		
 		Image resize( int size ) const;
 		
@@ -99,9 +102,14 @@ class Image {
 		 *  \param [in] format Format used for compression
 		 *  \param [in] p Precision of the file size calculation
 		 *  \return The size of the image compressed */
-		int compressed_size( Format format, Format::Precision p=Format::HIGH ) const{
-			return format.file_size( remove_transparent().img, p );
+		int compressed_size( Format format, Format::Precision p=Format::HIGH ) const
+			{ return (saved_data.size() <= 0) ? format.file_size( remove_transparent().img, p ) : saved_data.size(); }
+		
+		int save_compressed_size( Format format ){
+			saved_data = remove_transparent().to_byte_array( format );
+			return saved_data.size();
 		}
+		
 		Image difference( Image img ) const;
 		Image remove_area( Image img ) const;
 		Image clean_alpha( int kernel_size, int threshold ) const;
