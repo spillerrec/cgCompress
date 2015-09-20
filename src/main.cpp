@@ -147,7 +147,7 @@ int main( int argc, char* argv[] ){
 			
 			MultiImage multi_img( format );
 			for( auto image : images )
-				multi_img.append( Image( {0,0}, image.second ) );
+				multi_img.append( Image( image.second ) );
 			
 			doMultiImg( multi_img, name );
 		}
@@ -175,7 +175,7 @@ int main( int argc, char* argv[] ){
 				if( options.contains( "--auto" ) && !last.isNull() && !isSimilar( current, last ) )
 					break;
 				
-				multi_img.append( Image( {0,0}, current ) );
+				multi_img.append( Image( current ) );
 				last = current;
 			}
 			

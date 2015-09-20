@@ -37,8 +37,11 @@ class Image {
 		 *  \param [in] img The image data */
 		Image( QPoint pos, QImage img ) : pos(pos), img(img) { }
 		
+		/** \param [in] img QImage which will be converted to ARGB32 and positioned at {0,0} */
+		Image( QImage img ) : Image( {0,0}, img.convertToFormat(QImage::Format_ARGB32) ) { }
+		
 		/** \param [in] path Load the image at **path** on the file system */
-		Image( QString path ) : Image( {0,0}, QImage(path).convertToFormat(QImage::Format_ARGB32) ) { }
+		Image( QString path ) : Image( QImage(path) ) { }
 		
 	private:
 		Image( QPoint pos, QImage img, QImage mask ) : pos(pos), img(img), mask(mask) { }
