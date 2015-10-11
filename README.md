@@ -22,11 +22,17 @@ Provides a file-size/compression-time trade-off. A value of 0 means maximum comp
     --help
 Display quick help and exit
 
+    --auto
+Automatically tries to split the input files into several cgCompress files based on visual difference. Note that it will expand folders. It only compares files next to each other, so it requires the files to be in order. See `--combined` to manually fix those files which were split incorrectly.
+
     --extract
-Extract the images in cgCompress files to their original state. Use *\--format* to change output file format. Currently requires qt5-cgcompress-plugin to be installed.
+Extract the images in cgCompress files to their original state. Use `--format` to change output file format. Currently requires qt5-cgcompress-plugin to be installed.
 
     --recompress
 Extract and recompress cgCompress files. Useful for optimizing files which were created in an older version of cgCompress. Currently requires qt5-cgcompress-plugin to be installed.
+
+    --combined
+Extract and combines several cgCompress files into one file. Allows ordinary image files as well. Useful when `--auto` fails to combine files.
 
     --pack
 Create a cgCompress file from a directory containing an un-zipped cgCompress file. OpenRaster sets some requirements on the structure of the zip archive such as file order and compression settings, use this option to get it correct.

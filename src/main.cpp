@@ -152,6 +152,14 @@ int main( int argc, char* argv[] ){
 			doMultiImg( multi_img, name );
 		}
 	}
+	else if( options.contains( "--combined" ) ){
+		MultiImage multi_img( format );
+		for( auto file : files )
+			for( auto image : extract_files( file ) )
+				multi_img.append( Image( image.second ) );
+		
+		doMultiImg( multi_img, QFileInfo(files[0]).completeBaseName() );
+	}
 	else{
 		files = expandFolders( files );
 		
