@@ -35,7 +35,7 @@ class Image {
 	public:
 		/** \param [in] pos Offset of the image
 		 *  \param [in] img The image data */
-		Image( QPoint pos, QImage img ) : pos(pos), img(img) { }
+		Image( QPoint pos, QImage img );
 		
 		/** \param [in] img QImage which will be converted to ARGB32 and positioned at {0,0} */
 		Image( QImage img ) : Image( {0,0}, img.convertToFormat(QImage::Format_ARGB32) ) { }
@@ -93,7 +93,7 @@ class Image {
 		Image sub_image( int x, int y, int width, int height ) const{
 			QSize newSize( std::min( x+width,  x+mask.width()  ) - x
 			             , std::min( y+height, y+mask.height() ) - y );
-			auto newMask = newSize.isNull() ? mask : mask.copy( x,y, newSize.width(), newSize.height() );
+			auto newMask = newSize.isNull() ? QImage() : mask.copy( x,y, newSize.width(), newSize.height() );
 			return Image( pos+QPoint(x,y), img, newMask );
 		}
 		

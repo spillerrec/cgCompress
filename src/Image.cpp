@@ -33,6 +33,18 @@ const auto PIXEL_DIFFERENT = 0; //Pixel do not match with other image
 const auto PIXEL_MATCH = 1;     //Pixel is the same as other image
 const auto PIXEL_SHARED = 2;    //Pixel is the same, but must not be set as it differ in another image
 
+static QImage make_mask( QSize size ){
+	QImage mask( size, QImage::Format_Indexed8 );
+	mask.setColor( PIXEL_MATCH, qRgb(255, 0, 0) );
+	mask.setColor( PIXEL_DIFFERENT, qRgb(0, 255, 0) );
+	mask.setColor( PIXEL_SHARED, qRgb(0, 0, 255) );
+	return mask;
+}
+
+Image::Image( QPoint pos, QImage img ) : pos(pos), img(img), mask(make_mask(img.size())) {
+	mask.fill( PIXEL_DIFFERENT );
+}
+
 /** Create a resized version of this image, will keep aspect ratio
  *  \param [in] size Maximum dimensions of the resized image
  *  \return The resized image */
@@ -170,11 +182,7 @@ Image Image::combine( Image on_top ) const{
 Image Image::difference( Image input ) const{
 	//TODO: images must be the same size and at same point
 	
-	QImage mask( img.size(), QImage::Format_Indexed8 );
-	mask.setColor( PIXEL_MATCH, qRgb(255, 0, 0) );
-	mask.setColor( PIXEL_DIFFERENT, qRgb(0, 255, 0) );
-	mask.setColor( PIXEL_SHARED, qRgb(0, 0, 255) );
-	
+	auto mask = make_mask( img.size() );
 	for( int iy=0; iy<img.height(); iy++ ){
 		auto out      = (const QRgb*)      img.constScanLine( iy );
 		auto in       = (const QRgb*)input.img.constScanLine( iy );
