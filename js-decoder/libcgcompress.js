@@ -43,7 +43,8 @@ var stackParser = function( str ){
 		};
 };
 
-var loadCgCompress = function( zip ){
+var loadCgCompress = function( data ){
+	var zip = new JSZip( data );
 	var info = stackParser( zip.files["stack.xml"].asText() );
 	return {
 			zip: zip
@@ -69,20 +70,10 @@ var loadCgCompress = function( zip ){
 		};
 };
 
-JSZipUtils.getBinaryContent( 'test5.cgcompress', function( err, data ){
-	if( err ){
-		alert( err );
-		throw err; // or handle err
-	}
-	
-	var cg = loadCgCompress( new JSZip( data ) );
-	console.log( cg );
-	
-	var canvas = document.getElementById( "the-canvas" );
-	canvas.width  = cg.width;
-	canvas.height = cg.height;
-	
-	//Just testing with a single WebP image for now
-	var context = canvas.getContext( "2d" );
-	cg.drawStack( context, cg.stacks[14] );
-} );
+var fetchCgCompressUrl = function( url, callback ){
+	JSZipUtils.getBinaryContent( url, function( err, data ){
+			if( err )
+				throw err;
+			callback( loadCgCompress( data ) );
+		} );
+};

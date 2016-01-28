@@ -8,7 +8,18 @@
 		<script src="libs/libwebp-0.2.0.min.js"></script>
 		<script src="blending.js"></script>
 		<script src="loadImage.js"></script>
-		<script src="main.js"></script>
+		<script src="libcgcompress.js"></script>
+		<script>
+			fetchCgCompressUrl( 'test5.cgcompress', function( cg ){
+				var canvas = document.getElementById( "the-canvas" );
+				canvas.width  = cg.width;
+				canvas.height = cg.height;
+				
+				//Just testing with a single WebP image for now
+				var context = canvas.getContext( "2d" );
+				cg.drawStack( context, cg.stacks[14] );
+			} );
+		</script>
 	</head>
 	<body>
 		<canvas id="the-canvas" style="max-width:100%"></canvas>
