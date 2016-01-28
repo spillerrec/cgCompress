@@ -42,12 +42,17 @@ var stackParser = function( str ){
 		};
 };
 
-var drawStack = function( context, stack, zip ){ //TODO: avoid zip
+var drawStack = function( context, stack, zip, info ){ //TODO: avoid zip and info
+	var output = context.createImageData( info.width, info.height );
+	for( var i=0; i<output.data.length; i++ )
+		output.data[i] = 0;
+	
 	for( var i=stack.length-1; i>=0; i-- ){
 		var layer = stack[i];
 		var data2 = zip.files[layer.name].asUint8Array();
-		context.putImageData( loadImage( context, data2 ), layer.x, layer.y );
+		blendImages( output, loadImage( context, data2 ), layer.x, layer.y, svgOverlay );
 	}
+	context.putImageData( output, 0, 0 );
 };
 
 JSZipUtils.getBinaryContent( 'test.cgcompress', function( err, data ){
@@ -58,8 +63,6 @@ JSZipUtils.getBinaryContent( 'test.cgcompress', function( err, data ){
 		
 		//Load zip, just testing with a single WebP image for now
 		var zip = new JSZip( data );
-		data = zip.files["data/0.webp"].asUint8Array();
-		
 		var info = stackParser( zip.files["stack.xml"].asText() );
 		console.log( info );
 		
@@ -69,5 +72,5 @@ JSZipUtils.getBinaryContent( 'test.cgcompress', function( err, data ){
 		
 		var context = canvas.getContext( "2d" );
 		
-		drawStack( context, info.stacks[1], zip );
+		drawStack( context, info.stacks[1], zip, info );
 	} );
