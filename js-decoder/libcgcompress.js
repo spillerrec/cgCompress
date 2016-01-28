@@ -23,6 +23,19 @@ var getChildren = function( dom, name ){
 	return [].slice.call( dom.getElementsByTagName( name ) );
 };
 
+var parseCompositeOp = function( layer ){
+	var name = "composite-op"
+	if( !layer.hasAttribute( name ) )
+		return svgOverlay;
+	
+	var comp = layer.getAttribute( name );
+	switch( comp ){
+		case "cgcompress:alpha-replace": return alphaReplace;
+		case "svg:src-over": return svgOverlay;
+		default: throw "unsupported compositing operation: " + comp;
+	};
+};
+
 var stackParser = function( str ){
 	var xml = new DOMParser().parseFromString( str, "text/xml" );
 	var image = getSingleElement( xml, "image" );
@@ -36,7 +49,7 @@ var stackParser = function( str ){
 									name: layer.getAttribute( "src" )
 								,	x: getAttrInt( layer, "x", 0 )
 								,	y: getAttrInt( layer, "y", 0 )
-								,	overlay: svgOverlay //TODO:
+								,	overlay: parseCompositeOp( layer )
 								};
 						} );
 				} )

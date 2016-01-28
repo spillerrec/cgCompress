@@ -11,6 +11,12 @@ var svgOverlay = function( bottom, top ){
 		};
 };
 
+var alphaReplace = function( bottom, top ){
+	if( !(top.r == 255 && top.g == 0 && top.b == 255 && top.a == 0 ) )
+		return top;
+	return bottom;
+};
+
 var getRgba = function( data, offset ){
 	return {
 			r: data[offset+0]
