@@ -1,4 +1,24 @@
+var encode = function( data ){
+	var str = "";
+	for( var i=0; i<data.length; i++ )
+		str += String.fromCharCode( data[i] );
+
+	return btoa( str );
+}
+
 var loadImage = function( context, data ){
+	/* Using the native implementation
+	var img = new Image();
+	img.src = "data:image/webp;base64," + encode(data);
+	
+	var canvas = document.createElement('canvas');
+	canvas.width = img.width;
+	canvas.height = img.height;
+	var context2 = canvas.getContext('2d');
+	
+	context2.drawImage( img, 0, 0 );
+	return context2.getImageData( 0, 0, img.width, img.height );
+	/*/
 	//All the weird decoding code which looks like it was ported from C
 	var WebPImage = { width:{value:0},height:{value:0} };
 	var decoder = new WebPDecoder();
@@ -46,4 +66,5 @@ var loadImage = function( context, data ){
 	}
 	
 	return output;
+	//*/
 };
