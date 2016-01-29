@@ -61,13 +61,16 @@ var loadCgCompress = function( data ){
 	var info = stackParser( zip.files["stack.xml"].asText() );
 	return {
 			zip: zip
+		,	cachedImages: {}
 		,	width : info.width
 		,	height: info.height
 		,	stacks: info.stacks
 		
 		,	getImage: function( context, name ){
-					//TODO: Cache loaded images
-					return loadImage( context, this.zip.files[name].asUint8Array() );
+					//Cache image to avoid decoding it each time
+					if( this.cachedImages[name] === undefined )
+						this.cachedImages[name] = loadImage( context, this.zip.files[name].asUint8Array() );
+					return this.cachedImages[name];
 				}
 		,	drawStack: function( context, stack ){
 					var output = context.createImageData( this.width, this.height );
