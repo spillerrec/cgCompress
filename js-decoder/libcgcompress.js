@@ -80,6 +80,14 @@ var loadCgCompress = function( data ){
 					}
 					context.putImageData( output, 0, 0 );
 				}
+		,	drawStackUrl: function( stack ){
+					var canvas = document.createElement('canvas');
+					canvas.width = this.width;
+					canvas.height = this.height;
+					var context = canvas.getContext('2d');
+					this.drawStack( context, stack );
+					return canvas.toDataURL();
+				}
 		};
 };
 
