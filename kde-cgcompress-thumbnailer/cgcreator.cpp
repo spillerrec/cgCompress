@@ -93,7 +93,7 @@ bool CgCompressCreator::create( const QString& path, int, int, QImage& img ){
 	else{
 		QString name;
 		while( !(name = next_file( a )).isNull() ){
-			if( name.startsWith( "Thumbnails/thumbnail." ) ){
+			if( name.startsWith( "Thumbnails/thumbnail." ) || name.startsWith("thumb.") ){
 				qCDebug(LOG) << "Found thumbnail!";
 				QString suffix = QFileInfo(name).suffix();
 				img = read_image( a, suffix.toLocal8Bit().constData() );
