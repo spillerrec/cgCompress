@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Service
-Name=Dump image files
+Name=cgCompress image files
 X-KDE-ServiceTypes=ThumbCreator
 MimeType=image/x-spillerrec-dump;
-X-KDE-Library=dumpthumbnailer
+X-KDE-Library=cgthumbnailer
 CacheThumbnail=true
