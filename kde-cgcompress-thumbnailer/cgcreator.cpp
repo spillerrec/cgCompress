@@ -9,6 +9,9 @@
 #include <QImage>
 #include <QImageReader>
 
+#include <QLoggingCategory>
+Q_LOGGING_CATEGORY(LOG, "cgcompress.thumbnailer.spillerrec")
+
 extern "C"{
 	Q_DECL_EXPORT ThumbCreator *new_creator(){ return new CgCompressCreator; }
 }
@@ -42,7 +45,7 @@ static QString next_file( archive* a ){
 			return QString::fromWCharArray( archive_entry_pathname_w( entry ) );
 			
 		default:
-			qWarning( "Can't read the next zip header: %s", archive_error_string(a) );
+			qCWarning(LOG) << "Can't read the next zip header:" << archive_error_string(a);
 			return QString();
 	}
 }
@@ -60,7 +63,7 @@ static QByteArray read_data( archive* a ){
 			case ARCHIVE_OK: raw += QByteArray( buff, size ); break;
 			case ARCHIVE_EOF: return raw;
 			default:
-				qWarning( "Error while reading zip data: %s", archive_error_string(a) );
+				qCWarning(LOG) << "Error while reading zip data:" << archive_error_string(a);
 				return raw;
 		}
 	}
@@ -76,6 +79,7 @@ static QImage read_image( archive* a, const char* format=nullptr ){
 
 
 bool CgCompressCreator::create( const QString& path, int, int, QImage& img ){
+	qCDebug(LOG) << "Trying to read image" << path;
 	QFile file(path);
 	if( !file.open( QIODevice::ReadOnly ) )
 		return false;
@@ -85,11 +89,12 @@ bool CgCompressCreator::create( const QString& path, int, int, QImage& img ){
 	
 	ReadingData data( file );
 	if( archive_read_open( a, &data, nullptr, stream_read, stream_close ) )
-		qWarning( "couldn't open: %s", archive_error_string(a) );
+		qCWarning(LOG) << "couldn't open:" << archive_error_string(a);
 	else{
 		QString name;
 		while( !(name = next_file( a )).isNull() ){
 			if( name.startsWith( "Thumbnails/thumbnail." ) ){
+				qCDebug(LOG) << "Found thumbnail!";
 				QString suffix = QFileInfo(name).suffix();
 				img = read_image( a, suffix.toLocal8Bit().constData() );
 				break;
@@ -100,5 +105,7 @@ bool CgCompressCreator::create( const QString& path, int, int, QImage& img ){
 	archive_read_close( a );
 	archive_read_free( a );
 	
+	if( img.isNull() )
+		qCWarning(LOG) << "No thumbnail found!";
 	return !img.isNull();
 }
