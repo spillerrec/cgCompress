@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Service
+Name=Dump image files
+X-KDE-ServiceTypes=ThumbCreator
+MimeType=image/x-spillerrec-dump;
+X-KDE-Library=dumpthumbnailer
+CacheThumbnail=true
