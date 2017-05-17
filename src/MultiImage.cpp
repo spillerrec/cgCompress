@@ -42,7 +42,8 @@ QList<T> remove_duplicates( QList<T> elements ){
 /** Find a converter to a frame not found, will be called recursively to find
  *  all frames.
  *  \param [in,out] used_converters The converters found will be added to this
- *  \param [in,out] frames The list of transformations to get the images. Each *                     transformation contains a the indexes of images to get
+ *  \param [in,out] frames The list of transformations to get the images. Each
+ *                     transformation contains a the indexes of images to get
  *                     to the final image.
  *  \param [in] converters The available converters which may be used
  *  \param [in] amount The total amount of frames
