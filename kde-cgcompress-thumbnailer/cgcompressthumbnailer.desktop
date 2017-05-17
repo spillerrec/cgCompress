@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Service
+Name=cgCompress image files
+X-KDE-ServiceTypes=ThumbCreator
+MimeType=image/x-cgcompress;
+X-KDE-Library=cgthumbnailer
+CacheThumbnail=true

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=MimeType
+MimeType=image/x-cgcompress
+Icon=fooicon
+Patterns=*.cgcompress;
+DefaultApp=imgviewer
+Comment=Highly losslessy compressed visual novel graphics
