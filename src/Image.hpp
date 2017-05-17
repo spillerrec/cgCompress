@@ -127,6 +127,8 @@ class Image {
 		bool operator==( const Image& other ) const{
 			return pos == other.pos && img == other.img;
 		}
+		
+		bool mustKeepAlpha() const;
 };
 
 #endif

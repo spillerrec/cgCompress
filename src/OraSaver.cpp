@@ -142,9 +142,19 @@ void OraSaver::save( QString path, Format format ) const{
 		stack += "<stack>";
 		
 		for( auto layer : boost::adaptors::reverse(frame.layers) ){
+			//Detect composition mode
+			//TODO: Decide this earlier and change encoding type
+			QString composition = "composite-op=\"cgcompress:alpha-replace\"";
+			if( !primitives[layer].mustKeepAlpha() )
+				composition = "";
+			
 			QString name = QString( "data/%1.%2" ).arg( layer ).arg( format.ext() );
-			stack += QString( "<layer composite-op=\"cgcompress:alpha-replace\" name=\"%1\" src=\"%1\" x=\"%2\" y=\"%3\" />" )
-				.arg( name ).arg( primitives[layer].get_pos().x() ).arg( primitives[layer].get_pos().y() );
+			stack += QString( "<layer %1 name=\"%2\" src=\"%2\" x=\"%3\" y=\"%4\" />" )
+				.arg( composition )
+				.arg( name )
+				.arg( primitives[layer].get_pos().x() )
+				.arg( primitives[layer].get_pos().y() )
+				;
 		}
 		
 		stack += "</stack>";

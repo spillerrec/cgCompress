@@ -411,3 +411,19 @@ Image Image::optimize_filesize( Format format ) const{
 		return copy.remove_transparent();
 }
 
+bool Image::mustKeepAlpha() const{
+	auto img = qimg();
+	int width = img.width(), height = img.height();
+	
+	for( int iy=0; iy<height; iy++ ){
+		auto out = (const QRgb*)img.constScanLine( iy );
+			
+		for( int ix=0; ix<width; ix++ ){
+			auto pixel = out[ix];
+			if( (qAlpha(pixel) != 255) && (pixel != TRANS_SET) )
+				return true;
+		}
+	}
+	
+	return false;
+}
