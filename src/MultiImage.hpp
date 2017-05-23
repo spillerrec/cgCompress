@@ -44,6 +44,7 @@ class MultiImage {
 		void append( Image original ){ originals.append( original ); }
 		
 		bool optimize( QString name ) const;
+		bool optimize2( QString name ) const;
 		
 		bool validate( QString file ) const;
 		

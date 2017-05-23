@@ -20,6 +20,8 @@
 #include "Converter.hpp"
 #include "ProgressBar.hpp"
 
+#include "ImageSimilarities.hpp"
+
 #include <climits>
 #include <iostream>
 #include <string>
@@ -187,6 +189,58 @@ bool MultiImage::optimize( QString name ) const{
 	}
 	
 	OraSaver( final_primitives, final_frames ).save( name + ".cgcompress", format );
+	return true;
+}
+
+/** Alternative version of ::optimize()
+ *  \param [in] name File path for the output file, without the extension
+ *  \return true on success
+ */
+bool MultiImage::optimize2( QString name ) const{
+	if( originals.count() <= 0 )
+		return true;
+	
+	QList<Converter> converters;
+	ImageSimilarities similarities;
+	{	ProgressBar progress( "Finding similarities", originals.size() );
+		for( int i=0; i<originals.size(); i++ ){
+			similarities.addImage( originals[i].qimg() );
+			progress.update();
+			//TODO: each call is not the same complexity!
+		}
+	}
+	
+	/*
+	for( int i=0; i<originals.count(); i++ )
+		for( int j=0; j<=i; j++ ){
+			auto path = QString("simitest/img %1 - %2.png")
+				.arg( QString::number(i), 3, QLatin1Char('0') )
+				.arg( QString::number(j), 3, QLatin1Char('0') )
+				;
+			qDebug( path.toLocal8Bit().constData() );
+			similarities.getImagePart( i, j ).save( path );
+		}
+	*/
+	
+	for( int i=0; i<originals.count(); i++ ){
+		ImageMask mask( originals[i].qimg().size() );
+		mask.fill( 0 );
+		
+		for( int j=0; j<originals.count(); j++ ){
+			mask.combineMasks( similarities.getMask( j, i ) );
+		}
+		
+		auto path = QString("simitest/mask %1.png")
+				.arg( QString::number(i), 3, QLatin1Char('0') )
+			;
+		mask.apply( originals[i].qimg() ).save( path );
+	}
+	
+	
+//	QList<Image> final_primitives;
+//	QList<Frame> final_frames;
+	
+//	OraSaver( final_primitives, final_frames ).save( name + ".cgcompress", format );
 	return true;
 }
 
