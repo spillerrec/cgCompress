@@ -46,6 +46,9 @@ void print_help(){
 	cout << "\t" << "--pack         Re-zip an unzipped cgCompress file" << endl;
 	cout << "\t" << "--recompress   Extract and recompress a cgCompress file" << endl;
 	cout << "\t" << "--version      Show program version" << endl;
+	cout << "\t" << "--combined     Combine several cgCompress files into one" << endl;
+	cout << "\t" << "--noalpha      Remove alpha channel from input images" << endl;
+	cout << "\t" << "--discard-transparent  Remove pixel values from transparent pixels" << endl;
 }
 
 /** Retrieves XXX from --name=XXX
