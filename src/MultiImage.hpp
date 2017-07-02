@@ -26,7 +26,7 @@
 
 /** Contains an image which is made up of many similar images */
 class MultiImage {
-	private:
+	public:
 		Format format;
 		QList<Image> originals;
 		

@@ -2,6 +2,7 @@ TEMPLATE = app
 TARGET = cgCompress
 INCLUDEPATH += .
 CONFIG += console
+QT += concurrent
 
 LIBS += -lz
 

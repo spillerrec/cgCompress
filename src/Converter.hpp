@@ -30,12 +30,13 @@
  */
 class Converter {
 	private:
-		const QList<Image>* base_images;
+		const QList<Image>* base_images{ nullptr };
 		int from;
 		int to;
 		int size;
 		
 	public:
+		Converter(){} //NOTE: only for QtConcurrent
 		/** \param [in] base_images The images to convert on
 		 *  \param [in] from Index to the image to start on
 		 *  \param [in] to Index to the image to end on
