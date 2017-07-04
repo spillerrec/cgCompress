@@ -126,11 +126,22 @@ bool MultiImage::optimize( QString name ) const{
 	
 	QList<ConverterPara> converter_para;
 	for( int i=0; i<originals.size(); i++ )
-		for( int j=i+1; j<originals.size(); j++ )
+		for( int j=i+1; j<originals.size(); j++ ){
 			converter_para.push_back( { this, i, j } );
+			converter_para.push_back( { this, j, i } );
+		}
 	auto future1 = QtConcurrent::mapped( converter_para, createConverter );
 	showProgress( "Generating data", future1 );
 	auto converters = future1.results();
+	
+/*	for( auto converter : converters ){
+		auto name = QString("converter_to_%1_from_%2_%3")
+			.arg( QString::number(converter.get_to()  ), 3, QLatin1Char('0') )
+			.arg( QString::number(converter.get_from()), 3, QLatin1Char('0') )
+			.arg( converter.get_size() )
+			;
+		converter.get_primitive().auto_crop().remove_transparent().save( name, {"webp"} );
+	}//*/
 	
 	//Try all originals as the base image, and pick the best one
 	int best_size = INT_MAX;
