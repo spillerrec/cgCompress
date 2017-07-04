@@ -250,10 +250,10 @@ bool MultiImage::optimize2( QString name ) const{
 			mask.combineMasks( similarities.getMask( j, i ) );
 		}
 		
-		auto path = QString("simitest/mask %1.png")
+		auto path = QString("simitest/mask %1")
 				.arg( QString::number(i), 3, QLatin1Char('0') )
 			;
-		mask.apply( originals[i].qimg() ).save( path );
+		mask.apply( originals[i].qimg() ).auto_crop().save( path, {"webp"} );
 	}
 	
 	
