@@ -27,6 +27,7 @@
 #include <string>
 
 #include <QImageReader>
+#include <QtConcurrent>
 #include <QDebug>
 
 //TODO: this is used in several places, find a fitting place to have this
@@ -89,6 +90,32 @@ void add_converter( QList<Converter>& used_converters, QList<QList<int>>& frames
 	add_converter( used_converters, frames, converters, amount );
 }
 
+struct ConverterPara{
+	const MultiImage* parent;
+	int i, j;
+	ConverterPara( const MultiImage* parent, int i, int j ) : parent(parent), i(i), j(j) { }
+};
+Converter createConverter( const ConverterPara& p ){
+	return Converter( p.parent->originals, p.i, p.j, p.parent->format );
+}
+
+template<typename T>
+void showProgress( const char* description, QFuture<T>& future ){
+	ProgressBar progress( description, future.progressMaximum() - future.progressMinimum() );
+	
+	int last = future.progressMinimum();
+	while( !future.isFinished() ){
+		int current = future.progressValue();
+		if( current > last ){
+			progress.update( current - last );
+			last = current;
+		}
+		QThread::msleep( 10 );
+	}
+	
+	future.waitForFinished();
+}
+
 /** Create an efficient composite version and save it to a cgCompress file.
  *  \param [in] name File path for the output file, without the extension
  *  \return true on success
@@ -97,17 +124,24 @@ bool MultiImage::optimize( QString name ) const{
 	if( originals.count() <= 0 )
 		return true;
 	
-	QList<Converter> converters;
-	int base = originals.size() - 1;
-	{	ProgressBar progress( "Generating data", base*base + base );
-		for( int i=0; i<originals.size(); i++ )
-			for( int j=i+1; j<originals.size(); j++ ){
-				converters << Converter( originals, i, j, format );
-				progress.update();
-				converters << Converter( originals, j, i, format );
-				progress.update();
-			}
-	}
+	QList<ConverterPara> converter_para;
+	for( int i=0; i<originals.size(); i++ )
+		for( int j=i+1; j<originals.size(); j++ ){
+			converter_para.push_back( { this, i, j } );
+			converter_para.push_back( { this, j, i } );
+		}
+	auto future1 = QtConcurrent::mapped( converter_para, createConverter );
+	showProgress( "Generating data", future1 );
+	auto converters = future1.results();
+	
+/*	for( auto converter : converters ){
+		auto name = QString("converter_to_%1_from_%2_%3")
+			.arg( QString::number(converter.get_to()  ), 3, QLatin1Char('0') )
+			.arg( QString::number(converter.get_from()), 3, QLatin1Char('0') )
+			.arg( converter.get_size() )
+			;
+		converter.get_primitive().auto_crop().remove_transparent().save( name, {"webp"} );
+	}//*/
 	
 	//Try all originals as the base image, and pick the best one
 	int best_size = INT_MAX;
@@ -182,11 +216,8 @@ bool MultiImage::optimize( QString name ) const{
 		}
 	}
 	
-	{	ProgressBar progress( "Optimizing images", final_primitives.size()-1 );
-		for( int i=1; i<final_primitives.size(); i++, progress.update() )
-			if( final_primitives[i].is_valid() )
-				final_primitives[i] = final_primitives[i].optimize_filesize( format );
-	}
+	auto future2 = QtConcurrent::map( final_primitives, [&]( auto& img ){ img = img.optimize_filesize( format ); } );
+	showProgress( "Optimizing images", future2 );
 	
 	OraSaver( final_primitives, final_frames ).save( name + ".cgcompress", format );
 	return true;
@@ -230,10 +261,10 @@ bool MultiImage::optimize2( QString name ) const{
 			mask.combineMasks( similarities.getMask( j, i ) );
 		}
 		
-		auto path = QString("simitest/mask %1.png")
+		auto path = QString("simitest/mask %1")
 				.arg( QString::number(i), 3, QLatin1Char('0') )
 			;
-		mask.apply( originals[i].qimg() ).save( path );
+		mask.apply( originals[i].qimg() ).auto_crop().save( path, {"webp"} );
 	}
 	
 	

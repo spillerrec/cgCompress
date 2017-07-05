@@ -94,7 +94,7 @@ class Image {
 			QSize newSize( std::min( x+width,  x+mask.width()  ) - x
 			             , std::min( y+height, y+mask.height() ) - y );
 			auto newMask = newSize.isNull() ? QImage() : mask.copy( x,y, newSize.width(), newSize.height() );
-			return Image( pos+QPoint(x,y), img, newMask );
+			return Image( pos+QPoint(x,y), img.copy( x,y, newSize.width(), newSize.height() ), newMask );
 		}
 		
 		Image combine( Image on_top ) const;
@@ -129,6 +129,7 @@ class Image {
 		}
 		
 		bool mustKeepAlpha() const;
+		static Image fromTransparent( QImage img );
 };
 
 #endif

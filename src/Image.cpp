@@ -308,7 +308,7 @@ Image Image::remove_transparent() const{
 	if( mask.isNull() )
 		return *this;
 	
-	QImage output( img.copy( {pos, mask.size()} ).convertToFormat(QImage::Format_ARGB32) );
+	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
 	int width = output.width(), height = output.height();
 	
 	for( int iy=0; iy<height; iy++ ){
@@ -453,4 +453,18 @@ bool Image::mustKeepAlpha() const{
 	}
 	
 	return false;
+}
+
+
+Image Image::fromTransparent( QImage img ){
+	auto mask = make_mask( img.size() );
+	
+	for( int iy=0; iy<img.height(); iy++ ){
+		auto out = mask.scanLine( iy );
+		auto in = (const QRgb*)img.constScanLine( iy );
+		for( int ix=0; ix<img.width(); ix++ )
+			out[ix] = (qAlpha(in[ix]) != 0) ? PIXEL_DIFFERENT : PIXEL_MATCH;
+	}
+	
+	return Image( img ).newMask( mask );
 }

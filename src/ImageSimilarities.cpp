@@ -16,6 +16,7 @@
 */
 
 #include "ImageSimilarities.hpp"
+#include "Image.hpp"
 
 #include <cassert>
 
@@ -107,18 +108,18 @@ static QRgb makeTransparent( QRgb color )
 	{ return 0; }//qRgba( qRed( color ), qGreen( color ), qBlue( color ), 0 ); }
 
 //TODO: Use 'Image' class to support transparency?
-QImage ImageMask::apply( QImage image ) const{
+Image ImageMask::apply( QImage image ) const{
 	assert( image.size() == size() );
 	
 	for( int iy=0; iy<image.height(); iy++ ){
-		auto row = (      QRgb*)image.     scanLine( iy );
+		auto row = (QRgb*)image.scanLine( iy );
 		auto in  = constScanLine( iy );
 		for( int ix=0; ix<image.width(); ix++ )
 			if( in[ix] == MASK_FALSE )
 				row[ix] = makeTransparent( row[ix] );
 	}
 	
-	return image;
+	return Image::fromTransparent( image );
 }
 
 
@@ -150,5 +151,5 @@ ImageMask ImageSimilarities::getMask( int id, int ref ){
 	return refs[id].getMaskOf(ref);
 }
 
-QImage ImageSimilarities::getImagePart( int id, int ref )
-	{ return getMask( id, ref ).apply( originals[id] ); }
+//QImage ImageSimilarities::getImagePart( int id, int ref )
+//	{ return getMask( id, ref ).apply( originals[id] ); }

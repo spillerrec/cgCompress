@@ -23,6 +23,8 @@
 #include <memory>
 #include <vector>
 
+class Image;
+
 class ImageMask{
 	private:
 		QImage mask;
@@ -39,7 +41,7 @@ class ImageMask{
 		void fill( unsigned value ){ mask.fill( value ); }
 		
 		void combineMasks( ImageMask combine_with );
-		QImage apply( QImage image ) const;
+		Image apply( QImage image ) const;
 };
 
 class RefImage{
