@@ -325,6 +325,29 @@ Image Image::remove_transparent() const{
 	return out;
 }
 
+QRect fast_auto_crop( QImage mask ){
+	//Initialize lookup, will be true if any in a line is non-cropable
+	QVector<bool> hor( mask.width(), false );
+	QVector<bool> ver( mask.height(), false );
+	
+	//Build up lookup for horizontal and vertical lines
+	for( int iy=0; iy<mask.height(); iy++ ){
+		auto row = mask.constScanLine( iy );
+		for( int ix=0; ix<mask.width(); ix++ )
+			if( row[ix] == PIXEL_DIFFERENT )
+				hor[ix] = ver[iy] = true;
+	}
+	
+	//Find cropping size
+	int x=0, y=0, width=hor.count()-1, height=ver.count()-1;
+	for( ; x<hor.size() && !hor[x]; x++ );
+	for( ; y<ver.size() && !ver[y]; y++ );
+	for( ; width >=x && !hor[width ]; width-- );
+	for( ; height>=y && !ver[height]; height-- );
+	
+	return { x, y, width-x+1, height-y+1 };
+}
+
 template<typename Func>
 void find_auto_crop( QImage img, int &right, int &left, int &top, int &bottom, Func f ){
 	//Decrease top
@@ -365,12 +388,16 @@ RIGHT_BREAK:
 Image Image::auto_crop() const{
 	if( mask.isNull() )
 		return *this;
-	
+	/*
 	int right=0, left=0;
 	int top=0, bottom=0;
 	find_auto_crop( mask, right, left, top, bottom, [](unsigned i){ return i == PIXEL_DIFFERENT; } );
 	
 	return sub_image( left,top, img.width()-left-right, img.height()-top-bottom );
+	/*/
+	auto area = fast_auto_crop( mask );
+	return sub_image( area.x(), area.y(), area.width(), area.height() );
+	//*/
 }
 
 /** Minimize file size by cleaning the alpha, finds the best parameters
