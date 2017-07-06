@@ -182,12 +182,13 @@ Image Image::combine( Image on_top ) const{
 Image Image::difference( Image input ) const{
 	//TODO: images must be the same size and at same point
 	
+	auto w = img.width();
 	auto mask = make_mask( img.size() );
 	for( int iy=0; iy<img.height(); iy++ ){
 		auto out      = (const QRgb*)      img.constScanLine( iy );
 		auto in       = (const QRgb*)input.img.constScanLine( iy );
 		auto out_mask = mask.scanLine( iy );
-		for( int ix=0; ix<img.width(); ix++ )
+		for( int ix=0; ix<w; ix++ )
 			out_mask[ix] = (in[ix] == out[ix]) ? PIXEL_MATCH : PIXEL_DIFFERENT;
 	}
 	
@@ -325,79 +326,42 @@ Image Image::remove_transparent() const{
 	return out;
 }
 
-QRect fast_auto_crop( QImage mask ){
-	//Initialize lookup, will be true if any in a line is non-cropable
-	QVector<bool> hor( mask.width(), false );
-	QVector<bool> ver( mask.height(), false );
-	
-	//Build up lookup for horizontal and vertical lines
-	for( int iy=0; iy<mask.height(); iy++ ){
-		auto row = mask.constScanLine( iy );
-		for( int ix=0; ix<mask.width(); ix++ )
-			if( row[ix] == PIXEL_DIFFERENT )
-				hor[ix] = ver[iy] = true;
-	}
-	
-	//Find cropping size
-	int x=0, y=0, width=hor.count()-1, height=ver.count()-1;
-	for( ; x<hor.size() && !hor[x]; x++ );
-	for( ; y<ver.size() && !ver[y]; y++ );
-	for( ; width >=x && !hor[width ]; width-- );
-	for( ; height>=y && !ver[height]; height-- );
-	
-	return { x, y, width-x+1, height-y+1 };
-}
+struct ContentMap{
+	std::vector<uint8_t> hor;
+	std::vector<uint8_t> ver;
+	ContentMap( QImage mask );
+};
 
-template<typename Func>
-void find_auto_crop( QImage img, int &right, int &left, int &top, int &bottom, Func f ){
-	//Decrease top
-	for( ; top<img.height(); top++ ){
-		auto row = img.constScanLine( top );
-		for( int ix=0; ix<img.width(); ix++ )
-			if( f( row[ix] ) )
-				goto TOP_BREAK;
+	ContentMap::ContentMap( QImage mask )
+		:	hor( mask.width(), false )
+		,	ver( mask.height(), false ){
+		
+		auto w = mask.width(), h = mask.height();
+		for( int iy=0; iy<h; iy++ ){
+			auto row = mask.constScanLine( iy );
+			for( int ix=0; ix<w; ix++ )
+				if( row[ix] == PIXEL_DIFFERENT )
+					hor[ix] = ver[iy] = true;
+		}
 	}
-TOP_BREAK:
-	
-	//Decrease bottom
-	for( ; bottom<img.height(); bottom++ ){
-		auto row = img.constScanLine( img.height()-1-bottom );
-		for( int ix=0; ix<img.width(); ix++ )
-			if( f( row[ix] ) )
-				goto BOTTOM_BREAK;
-	}
-BOTTOM_BREAK:
-	
-	//Decrease left
-	for( ; left<img.width(); left++ )
-		for( int iy=0; iy<img.height(); iy++ )
-			if( f( img.pixelIndex(left,iy) ) )
-				goto LEFT_BREAK;
-LEFT_BREAK:
-	
-	//Decrease right
-	for( ; right<img.width(); right++ )
-		for( int iy=0; iy<img.height(); iy++ )
-			if( f( img.pixelIndex(img.width()-1-right,iy) ) )
-				goto RIGHT_BREAK;
-RIGHT_BREAK:
-	return; //Whaat...
-}
-
 /** \return This image, but with image data cropped to only contain non-transparent areas */
 Image Image::auto_crop() const{
 	if( mask.isNull() )
 		return *this;
-	/*
-	int right=0, left=0;
-	int top=0, bottom=0;
-	find_auto_crop( mask, right, left, top, bottom, [](unsigned i){ return i == PIXEL_DIFFERENT; } );
 	
-	return sub_image( left,top, img.width()-left-right, img.height()-top-bottom );
-	/*/
-	auto area = fast_auto_crop( mask );
-	return sub_image( area.x(), area.y(), area.width(), area.height() );
-	//*/
+	//Build up lookup for horizontal and vertical lines
+	ContentMap map( mask );
+	
+	//Find cropping size
+	int w = map.hor.size(), h = map.ver.size();
+	int x=0, y=0, width=w-1, height=h-1;
+	for( ;    x < w  && !map.hor[  x   ]; x++      );
+	for( ;    y < h  && !map.ver[  y   ]; y++      );
+	for( ; width >=x && !map.hor[width ]; width--  );
+	for( ; height>=y && !map.ver[height]; height-- );
+	
+	//Crop image
+	return sub_image( x, y, width-x+1, height-y+1 );
 }
 
 /** Minimize file size by cleaning the alpha, finds the best parameters

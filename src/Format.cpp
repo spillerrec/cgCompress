@@ -27,9 +27,10 @@
 int image_gradient_sum( QImage img ){
 	int diffs = 0;
 	
+	auto w = img.width();
 	for( int iy=0; iy<img.height(); iy++ ){
 		auto row = (const QRgb*) img.constScanLine( iy );
-		for( int ix=1; ix<img.width(); ix++ ){
+		for( int ix=1; ix<w/*img.width()*/; ix++ ){
 			//we add the difference in shown pixels
 			QRgb left = row[ix-1], right = row[ix];
 			diffs += abs( qAlpha(left) - qAlpha(right) );
