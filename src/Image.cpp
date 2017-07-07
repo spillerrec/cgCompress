@@ -402,6 +402,48 @@ Image Image::optimize_filesize( Format format ) const{
 		return copy.remove_transparent();
 }
 
+int Image::compressed_size( Format format, Format::Precision p ) const{
+	//Use low-precision if not high
+	//NOTE: We cannot use the saved, as it is different
+	if( format.get_precision() != Format::HIGH )
+		return estimate_compressed_size( format );
+	
+	//If we already have compressed it, use that
+	//TODO: Wrong if format have changed!
+	if( saved_data.size() > 0 )
+		return saved_data.size();
+	
+	//Calculate the gradient
+	return format.file_size( remove_transparent().img, p );
+}
+
+int Image::estimate_compressed_size( Format format ) const{
+	if( mask.isNull() )
+		return format.file_size( remove_transparent().qimg(), Format::LOW );
+	int diffs = 0;
+	
+	auto w = img.width();
+	for( int iy=0; iy<img.height(); iy++ ){
+		auto row_alpha = mask.constScanLine( iy );
+		auto row = (const QRgb*) img.constScanLine( iy );
+		for( int ix=1; ix<w; ix++ ){
+			auto alpha_left  = row_alpha[ix-1] != PIXEL_DIFFERENT;
+			auto alpha_right = row_alpha[ix  ] != PIXEL_DIFFERENT;
+			diffs += (alpha_left != alpha_right) ? 255 : 0;
+			//TODO: not great for images with transparency
+			//we add the difference in shown pixels
+			if( !(alpha_left || alpha_right) ){
+				QRgb left = row[ix-1], right = row[ix];
+				diffs += abs( qRed(  left) - qRed(  right) );
+				diffs += abs( qGreen(left) - qGreen(right) );
+				diffs += abs( qBlue( left) - qBlue( right) );
+			}
+		}
+	}
+	
+	return diffs;
+}
+
 bool Image::mustKeepAlpha() const{
 	auto img = qimg();
 	int width = img.width(), height = img.height();

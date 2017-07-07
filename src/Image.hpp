@@ -105,8 +105,7 @@ class Image {
 		 *  \param [in] format Format used for compression
 		 *  \param [in] p Precision of the file size calculation
 		 *  \return The size of the image compressed */
-		int compressed_size( Format format, Format::Precision p=Format::HIGH ) const
-			{ return (saved_data.size() <= 0) ? format.file_size( remove_transparent().img, p ) : saved_data.size(); }
+		int compressed_size( Format format, Format::Precision p=Format::HIGH ) const;
 		
 		int save_compressed_size( Format format ){
 			saved_data = remove_transparent().to_byte_array( format );
@@ -121,6 +120,7 @@ class Image {
 		Image auto_crop() const;
 		
 		Image optimize_filesize( Format format ) const;
+		int estimate_compressed_size( Format format ) const;
 		
 		/** \param [in] other Image to compare against
 		 *  \return true if images are interchangeable */
