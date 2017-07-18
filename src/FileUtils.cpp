@@ -48,8 +48,10 @@ QList<std::pair<QString,QImage>> extract_files( QString filename ){
 	QImage img;
 	
 	int i=0;
-	while( reader.read( &img ) )
-		files.append( { QString::number( i++ ), img } );
+	while( reader.read( &img ) ){
+		auto index = QString( "%1" ).arg( i++, 4, 10, QChar{'0'} );
+		files.append( { index, img } );
+	}
 	
 	return files;
 }
