@@ -20,6 +20,9 @@ CONFIG += c++14
 # Generate both debug and release on Linux
 CONFIG += debug_and_release
 
+#QMAKE_CXXFLAGS_RELEASE -= -O2
+QMAKE_CXXFLAGS_DEBUG += -O3
+
 # Position of binaries and build files
 Release:DESTDIR = release
 Release:UI_DIR = release/.ui

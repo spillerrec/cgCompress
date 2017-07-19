@@ -34,5 +34,8 @@ bool isSimilar( QImage img1, QImage img2 );
 
 QStringList expandFolders( QStringList files );
 
+QImage discardTransparent( QImage img, QRgb discard_color = qRgb(0,0,0) );
+QImage withoutAlpha( QImage img );
+
 #endif
 

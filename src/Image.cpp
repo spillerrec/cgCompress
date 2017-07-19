@@ -41,7 +41,9 @@ static QImage make_mask( QSize size ){
 	return mask;
 }
 
-Image::Image( QPoint pos, QImage img ) : pos(pos), img(img), mask(make_mask(img.size())) {
+Image::Image( QPoint pos, QImage img )
+	:	img(img.convertToFormat(QImage::Format_ARGB32), pos), mask(make_mask(img.size()))
+{
 	mask.fill( PIXEL_DIFFERENT );
 }
 
@@ -51,7 +53,7 @@ Image::Image( QPoint pos, QImage img ) : pos(pos), img(img), mask(make_mask(img.
 Image Image::resize( int size ) const{
 	size = min( size, img.width() );
 	size = min( size, img.height() );
-	QImage scaled = img.scaled( size, size, Qt::KeepAspectRatio, Qt::SmoothTransformation );
+	QImage scaled = qimg().scaled( size, size, Qt::KeepAspectRatio, Qt::SmoothTransformation );
 	return Image( {0,0}, scaled );
 }
 
@@ -97,34 +99,21 @@ QList<Image> Image::segment() const{
 }
 */
 
-/** \return This image where all transparent pixels are set to #000000 */
-Image Image::discardTransparent() const{
-	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
-	
-	auto size = output.size();
-	for( int iy=0; iy<size.height(); iy++ ){
-		QRgb* out = (QRgb*)output.scanLine( iy );
-		for( int ix=0; ix<size.width(); ix++ )
-			if( qAlpha( out[ix] ) == 0 )
-				out[ix] = qRgba( 0,0,0,0 );
-	}
-			
-	return Image( pos, output );
-}
-
 /** Make the area the other image covers transparent (colors are kept).
  *  \param [in] input The area to remove
  *  \return The resulting image */
 Image Image::remove_area( Image input ) const{
-	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
+	//TODO: Only affect the mask?
+	QImage output( qimg().convertToFormat(QImage::Format_ARGB32) );
 	
-	for( int iy=input.pos.y(); iy<input.pos.y()+input.img.height(); iy++ ){
+	//TODO: This is wrong, it should be the difference!
+	for( int iy=input.get_pos().y(); iy<input.get_pos().y()+input.img.height(); iy++ ){
 		QRgb* out = (QRgb*)output.scanLine( iy );
-		for( int ix=input.pos.x(); ix<input.pos.x()+input.img.width(); ix++ )
+		for( int ix=input.get_pos().x(); ix<input.get_pos().x()+input.img.width(); ix++ )
 			out[ix] = qRgba( qRed(out[ix]),qGreen(out[ix]),qBlue(out[ix]),0 );
 	}
 			
-	return Image( pos, output );
+	return Image( get_pos(), output );
 }
 
 /** Segment based on how the images differs.
@@ -163,15 +152,15 @@ QList<Image> Image::diff_segment( Image diff ) const{
  *  \param [in] on_top Image to paint
  *  \return The combined image */
 Image Image::combine( Image on_top ) const{
-	QPoint tl{ min( pos.x(), on_top.pos.x() ), min( pos.y(), on_top.pos.y() ) };
-	int width = max( pos.x()+img.width(), on_top.pos.x()+on_top.img.width() ) - tl.x();
-	int height = max( pos.y()+img.height(), on_top.pos.y()+on_top.img.height() ) - tl.y();
+	QPoint tl{ min( get_pos().x(), on_top.get_pos().x() ), min( get_pos().y(), on_top.get_pos().y() ) };
+	int width  = max( get_pos().x()+img.width(),  on_top.get_pos().x()+on_top.img.width() )  - tl.x();
+	int height = max( get_pos().y()+img.height(), on_top.get_pos().y()+on_top.img.height() ) - tl.y();
 	
 	QImage output( width, height, QImage::Format_ARGB32 );
 	output.fill( 0 );
 	QPainter painter( &output );
-	painter.drawImage( pos-tl, img );
-	painter.drawImage( on_top.pos-tl, on_top.img );
+	painter.drawImage(        get_pos()-tl,        qimg() );
+	painter.drawImage( on_top.get_pos()-tl, on_top.qimg() );
 	
 	return Image( tl, output ); //TODO:
 }
@@ -185,8 +174,8 @@ Image Image::difference( Image input ) const{
 	auto w = img.width();
 	auto mask = make_mask( img.size() );
 	for( int iy=0; iy<img.height(); iy++ ){
-		auto out      = (const QRgb*)      img.constScanLine( iy );
-		auto in       = (const QRgb*)input.img.constScanLine( iy );
+		auto out      =       img.row( iy );
+		auto in       = input.img.row( iy );
 		auto out_mask = mask.scanLine( iy );
 		for( int ix=0; ix<w; ix++ )
 			out_mask[ix] = (in[ix] == out[ix]) ? PIXEL_MATCH : PIXEL_DIFFERENT;
@@ -203,12 +192,13 @@ Image Image::contain_both( Image input ) const{
 	//TODO: images must be the same size and at same point
 	if( mask.isNull() ||input.mask.isNull() )
 		return Image( {0,0}, QImage() );
+	//TODO: Check the behaviour of this
 	
 	QImage mask_output( mask );
 	
 	for( int iy=0; iy<mask.height(); iy++ ){
-		auto in1 = (const QRgb*)      img.constScanLine( iy +       pos.y() ) +       pos.x();
-		auto in2 = (const QRgb*)input.img.constScanLine( iy + input.pos.y() ) + input.pos.x();
+		auto in1 =       img.row( iy );
+		auto in2 = input.img.row( iy );
 		
 		auto mask1 =       mask.constScanLine( iy );
 		auto mask2 = input.mask.constScanLine( iy );
@@ -305,11 +295,11 @@ Image Image::clean_alpha( int kernel_size, int threshold ) const{
 }
 
 /** \return This image where all transparent pixels are set to transparent black **/
-Image Image::remove_transparent() const{
+QImage Image::remove_transparent() const{
 	if( mask.isNull() )
-		return *this;
+		return qimg(); //Nothing is transparent
 	
-	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
+	QImage output( qimg() );
 	int width = output.width(), height = output.height();
 	
 	for( int iy=0; iy<height; iy++ ){
@@ -321,9 +311,7 @@ Image Image::remove_transparent() const{
 				out[ix] = TRANS_SET;
 	}
 	
-	Image out( pos, output );
-	out.saved_data = saved_data; //This is already with without transparent data
-	return out;
+	return output;
 }
 
 struct ContentMap{
@@ -379,7 +367,7 @@ Image Image::optimize_filesize( Format format ) const{
 				changeable++;
 	}
 	if( changeable == 0 )
-		return copy.remove_transparent();
+		return copy;
 	
 	//Start with the basic image
 	Image best = copy;
@@ -397,9 +385,9 @@ Image Image::optimize_filesize( Format format ) const{
 	
 	//Make sure filtering actually improved the situation
 	if( copy.save_compressed_size( format ) > best.save_compressed_size( format ) )
-		return best.remove_transparent();
+		return best;
 	else
-		return copy.remove_transparent();
+		return copy;
 }
 
 int Image::compressed_size( Format format, Format::Precision p ) const{
@@ -414,18 +402,18 @@ int Image::compressed_size( Format format, Format::Precision p ) const{
 		return saved_data.size();
 	
 	//Calculate the gradient
-	return format.file_size( remove_transparent().img, p );
+	return format.file_size( remove_transparent(), p );
 }
 
 int Image::estimate_compressed_size( Format format ) const{
 	if( mask.isNull() )
-		return format.file_size( remove_transparent().qimg(), Format::LOW );
+		return format.file_size( remove_transparent(), Format::LOW );
 	int diffs = 0;
 	
 	auto w = img.width();
 	for( int iy=0; iy<img.height(); iy++ ){
 		auto row_alpha = mask.constScanLine( iy );
-		auto row = (const QRgb*) img.constScanLine( iy );
+		auto row = img.row( iy );
 		for( int ix=1; ix<w; ix++ ){
 			auto alpha_left  = row_alpha[ix-1] != PIXEL_DIFFERENT;
 			auto alpha_right = row_alpha[ix  ] != PIXEL_DIFFERENT;

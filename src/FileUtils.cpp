@@ -167,3 +167,24 @@ QStringList expandFolders( QStringList paths ){
 	
 	return files;
 }
+
+
+/** \return This image where all transparent pixels are set to discard_color */
+QImage discardTransparent( QImage img, QRgb discard_color ){
+	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
+	
+	auto size = output.size();
+	for( int iy=0; iy<size.height(); iy++ ){
+		QRgb* out = (QRgb*)output.scanLine( iy );
+		for( int ix=0; ix<size.width(); ix++ )
+			if( qAlpha( out[ix] ) == 0 )
+				out[ix] = discard_color;
+	}
+			
+	return output;
+}
+
+QImage withoutAlpha( QImage img ){
+	return img.convertToFormat(QImage::Format_RGB32).convertToFormat(QImage::Format_ARGB32);
+}
+

@@ -23,11 +23,11 @@
 #include <QByteArray>
 
 #include "Format.hpp"
+#include "SubQImage.hpp"
 
 class Image {
 	private:
-		QPoint pos;
-		QImage img;
+		SubQImage img;
 		QImage mask;
 		
 		QByteArray saved_data;
@@ -44,8 +44,8 @@ class Image {
 		Image( QString path ) : Image( QImage(path) ) { }
 		
 	private:
-		Image( QPoint pos, QImage img, QImage mask ) : pos(pos), img(img), mask(mask) { }
-		Image newMask( QImage mask ) const{ return Image( pos, img, mask ); }
+		Image( SubQImage img, QImage mask ) : img(img), mask(mask) { }
+		Image newMask( QImage mask ) const{ return Image( img, mask ); }
 		/*
 		QList<Image> segment() const;
 		QList<Image> diff_segment( Image diff ) const;*/
@@ -61,26 +61,22 @@ class Image {
 		bool is_valid() const{ return !img.size().isEmpty(); }
 		
 		/** \return The offset of the image */
-		QPoint get_pos() const{ return pos; }
+		QPoint get_pos() const{ return img.offset(); }
 		
 		/** \return The image data */
-		QImage qimg() const{ return img; }
-		
-		/** Remove alpha */
-		void removeAlpha()
-			{ img = img.convertToFormat(QImage::Format_RGB32).convertToFormat(QImage::Format_ARGB32); }
+		QImage qimg() const{ return img.get(); }
 		
 		/** Save the image to the file system
 		 *  \param [in] path The location on the file system
 		 *  \param [in] format The format used for compression
 		 *  \return true if successful */
-		bool save( QString path, Format format ) const{ return format.save( img, path ); }
+		bool save( QString path, Format format ) const{ return format.save( remove_transparent(), path ); }
 		
 		/** Save the image to a memory buffer
 		 *  \param [in] format The compression format to use
 		 *  \return The image in compressed form */
 		QByteArray to_byte_array( Format format ) const
-			{ return saved_data.size() > 0 ? saved_data : format.to_byte_array( img ); }
+			{ return saved_data.size() > 0 ? saved_data : format.to_byte_array( remove_transparent() ); }
 		
 		Image resize( int size ) const;
 		
@@ -94,7 +90,7 @@ class Image {
 			QSize newSize( std::min( x+width,  x+mask.width()  ) - x
 			             , std::min( y+height, y+mask.height() ) - y );
 			auto newMask = newSize.isNull() ? QImage() : mask.copy( x,y, newSize.width(), newSize.height() );
-			return Image( pos+QPoint(x,y), img.copy( x,y, newSize.width(), newSize.height() ), newMask );
+			return Image( img.copy( {x,y}, newSize ), newMask );
 		}
 		
 		Image combine( Image on_top ) const;
@@ -108,15 +104,14 @@ class Image {
 		int compressed_size( Format format, Format::Precision p=Format::HIGH ) const;
 		
 		int save_compressed_size( Format format ){
-			saved_data = remove_transparent().to_byte_array( format );
+			saved_data = to_byte_array( format );
 			return saved_data.size();
 		}
 		
 		Image difference( Image img ) const;
 		Image remove_area( Image img ) const;
 		Image clean_alpha( int kernel_size, int threshold ) const;
-		Image remove_transparent() const;
-		Image discardTransparent() const;
+		QImage remove_transparent() const;
 		Image auto_crop() const;
 		
 		Image optimize_filesize( Format format ) const;
@@ -124,9 +119,8 @@ class Image {
 		
 		/** \param [in] other Image to compare against
 		 *  \return true if images are interchangeable */
-		bool operator==( const Image& other ) const{
-			return pos == other.pos && img == other.img;
-		}
+		bool operator==( const Image& other ) const
+			{ return img == other.img && mask == other.mask; }
 		
 		bool mustKeepAlpha() const;
 		static Image fromTransparent( QImage img );

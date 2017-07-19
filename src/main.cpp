@@ -123,14 +123,14 @@ int main( int argc, char* argv[] ){
 	
 	Format format = get_format( options );
 	
-	auto doMultiImg = [&]( MultiImage& multi_img, QString output_path ){
+	auto convert_img = [&]( QImage img ){
 			if( options.contains( "--noalpha" ) )
-				multi_img.removeAlpha();
+				img = withoutAlpha( img );
 			
 			if( options.contains( "--discard-transparent" ) )
-				multi_img.discardTransparent();
+				img = discardTransparent( img );
 			
-			return optimizeImage( multi_img, output_path );
+			return img;
 		};
 	
 	if(      options.contains( "--help"    ) ) print_help();
@@ -150,18 +150,18 @@ int main( int argc, char* argv[] ){
 			
 			MultiImage multi_img( format );
 			for( auto image : images )
-				multi_img.append( Image( image.second ) );
+				multi_img.append( Image( convert_img( {image.second} ) ) );
 			
-			doMultiImg( multi_img, name );
+			optimizeImage( multi_img, name );
 		}
 	}
 	else if( options.contains( "--combined" ) ){
 		MultiImage multi_img( format );
 		for( auto file : files )
 			for( auto image : extract_files( file ) )
-				multi_img.append( Image( image.second ) );
+				multi_img.append( Image( convert_img( image.second ) ) );
 		
-		doMultiImg( multi_img, QFileInfo(files[0]).completeBaseName() );
+		optimizeImage( multi_img, QFileInfo(files[0]).completeBaseName() );
 	}
 	else{
 		files = expandFolders( files );
@@ -181,7 +181,7 @@ int main( int argc, char* argv[] ){
 			
 			QImage last;
 			for( int j=start; j<files.size(); j++ ){
-				QImage current( files[j] );
+				QImage current = convert_img( QImage{files[j]} );
 				
 				if( options.contains( "--auto" ) && !last.isNull() && !isSimilar( current, last ) )
 					break;
@@ -190,7 +190,7 @@ int main( int argc, char* argv[] ){
 				last = current;
 			}
 			
-			doMultiImg( multi_img, name );
+			optimizeImage( multi_img, name );
 			start += multi_img.count();
 		}
 	}
