@@ -26,7 +26,7 @@
  *  \param [in] images The images to form individual frames
  */
 OraSaver::OraSaver( QList<Image> images ) : primitives( images ){
-	Frame frame( primitives );
+	Frame frame( primitives, {} );
 	for( int i=0; i<images.size(); i++ )
 		frame.layers.append( i );
 	frames.append( frame );

@@ -35,10 +35,8 @@ QList<int> Converter::path( const QList<Converter>& converters, int from, int to
 		//Find matching converter
 		auto is_match = [&](auto conv){ return conv.get_to() == current; };
 		auto match = std::find_if( converters.begin(), converters.end(), is_match );
-		if( match == converters.end() ){
-			qDebug( "FAILED!" );
+		if( match == converters.end() )
 			throw std::runtime_error( "Converter::path() could not find a complete path" );
-		}
 		
 		current = match->get_from();
 		conv_path << current;

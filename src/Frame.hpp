@@ -31,8 +31,10 @@ class Frame {
 		/// The indexes to primitives used for reconstructing
 		QList<int> layers;
 		
-		/** \param [in] primitives The primitives used to build the frame */
-		Frame( QList<Image> primitives ) : primitives( primitives ) { }
+		/** \param [in] primitives The primitives used to build the frame
+		  * \param [in] layers The specific order of the primitives used */
+		Frame( QList<Image> primitives, QList<int> layers )
+			: primitives( primitives ), layers( layers ) { }
 		
 		Image reconstruct() const;
 };
