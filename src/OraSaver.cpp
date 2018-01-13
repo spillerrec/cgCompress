@@ -112,10 +112,12 @@ void OraSaver::save( QString path, Format format ) const{
 		return;
 	}
 	
+	auto first_frame = frames.first().reconstruct();
+	
 	QList<std::pair<QString,QByteArray>> files;
 	
 	// Thumbnail
-	Image thumb = frames.first().reconstruct().resize( 256 );
+	Image thumb = first_frame.resize( 256 );
 	Format lossy = format.get_lossy();
 	files.append( { lossy.filename("Thumbnails/thumbnail"), thumb.to_byte_array( lossy ) } );
 	
@@ -136,7 +138,7 @@ void OraSaver::save( QString path, Format format ) const{
 	
 	//Create stack
 	QString stack( "<?xml version='1.0' encoding='UTF-8'?>\n" );
-	stack += QString( "<image w=\"%1\" h=\"%2\">" ).arg( primitives[0].qimg().width() ).arg( primitives[0].qimg().height() );
+	stack += QString( "<image w=\"%1\" h=\"%2\">" ).arg( first_frame.qimg().width() ).arg( first_frame.qimg().height() );
 	
 	for( auto frame : frames ){
 		stack += "<stack>";
