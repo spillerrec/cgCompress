@@ -69,23 +69,6 @@ Converter createConverter( const ConverterPara& p ){
 	return Converter( p.parent->originals, p.i, p.j, p.parent->format );
 }
 
-template<typename T>
-void showProgress( const char* description, QFuture<T>& future ){
-	ProgressBar progress( description, future.progressMaximum() - future.progressMinimum() );
-	
-	int last = future.progressMinimum();
-	while( !future.isFinished() ){
-		QThread::msleep( 10 );
-		int current = future.progressValue();
-		if( current > last ){
-			progress.update( current - last );
-			last = current;
-		}
-	}
-	
-	future.waitForFinished();
-}
-
 static void reuse_planes( QList<Image>& primitives, QList<Frame>& frames ){
 	// Try to reuse planes if possible
 	for( int i=0; i<primitives.size(); i++ ){
@@ -131,7 +114,7 @@ bool MultiImage::optimize( QString name ) const{
 		converters << createConverter( converter_para[i] );
 	/*/
 	auto future1 = QtConcurrent::mapped( converter_para, createConverter );
-	showProgress( "Generating data", future1 );
+	ProgressBar::showFuture( "Generating data", future1 );
 	auto converters = future1.results();
 	//*/
 	qDebug() << "Took:" << t.elapsed();
@@ -173,8 +156,9 @@ bool MultiImage::optimize( QString name ) const{
 			
 			//Evaluate file size and overwrite old solution if better
 			int filesize = 0;
-			for( auto& primitive : primitives )
-				filesize += primitive.compressed_size( format, Format::MEDIUM );
+			if( test_amount > 0 ) //Skip this for the simple 1-test case
+				for( auto& primitive : primitives )
+					filesize += primitive.compressed_size( format, Format::MEDIUM );
 			if( filesize < best_size ){
 				best_size = filesize;
 				final_primitives = primitives;
@@ -184,7 +168,7 @@ bool MultiImage::optimize( QString name ) const{
 	}
 	
 	auto future2 = QtConcurrent::map( final_primitives, [&]( auto& img ){ img = img.optimize_filesize( format ); } );
-	showProgress( "Optimizing images", future2 );
+	ProgressBar::showFuture( "Optimizing images", future2 );
 	
 	OraSaver( final_primitives, final_frames ).save( name + ".cgcompress", format );
 	return true;
@@ -295,7 +279,7 @@ bool MultiImage::optimize3( QString name ) const{
 	reuse_planes( primitives, frames );
 	
 	auto future2 = QtConcurrent::map( primitives, [&]( auto& img ){ img = img.optimize_filesize( format ); } );
-	showProgress( "Optimizing images", future2 );
+	ProgressBar::showFuture( "Optimizing images", future2 );
 	
 	//Save cgCompress image
 	OraSaver( primitives, frames ).save( name + ".cgcompress", format );

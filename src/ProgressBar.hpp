@@ -21,6 +21,9 @@
 #include <string>
 #include <iostream>
 
+#include <QFuture>
+#include <QThread>
+
 /** Creates a progress bar on stdout with a title. Scope is used to stop the
  *  progress bar, do not output anything to stdout until the destructor is
  *  called */
@@ -65,6 +68,25 @@ class ProgressBar{
 		void update( int progress=1 ){
 			for( count += progress; written < count*size/amount; written++ )
 				std::cout << "X";
+		}
+		
+		
+
+		template<typename T>
+		static void showFuture( const char* description, QFuture<T>& future ){
+			ProgressBar progress( description, future.progressMaximum() - future.progressMinimum() );
+			
+			int last = future.progressMinimum();
+			while( !future.isFinished() ){
+				QThread::msleep( 10 );
+				int current = future.progressValue();
+				if( current > last ){
+					progress.update( current - last );
+					last = current;
+				}
+			}
+			
+			future.waitForFinished();
 		}
 };
 
