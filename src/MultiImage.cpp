@@ -22,6 +22,7 @@
 
 #include "ImageSimilarities.hpp"
 
+#include <algorithm>
 #include <climits>
 #include <iostream>
 #include <string>
@@ -284,6 +285,69 @@ bool MultiImage::optimize2( QString name ) const{
 //	OraSaver( final_primitives, final_frames ).save( name + ".cgcompress", format );
 	return true;
 }
+
+/** Create an efficient composite version and save it to a cgCompress file.
+ *  A faster version of method 1.
+ *  \param [in] name File path for the output file, without the extension
+ *  \return true on success
+ */
+bool MultiImage::optimize3( QString name ) const{
+	if( originals.count() <= 0 )
+		return true;
+	
+	//Part 
+	QList<Converter> used_converters;
+	QSet<int> all, done;
+	for( int i=0; i<originals.size(); i++ )
+		all << i;
+	
+	//Add the base image, always the first one (for now at least)
+	int starting_image = 0;
+	used_converters << Converter( originals, starting_image, starting_image, format );
+	done << starting_image;
+	
+	//Add the remaining images
+	for( int i=1; i<originals.size(); i++ ){
+		//Create all needed converters
+		QList<ConverterPara> converter_para;
+		for( auto img_to : all.subtract( done ) )
+			for( auto img_from : done )
+				converter_para.push_back( { this, img_from, img_to } );
+		auto converters = QtConcurrent::mapped( converter_para, createConverter ).results();
+		//NOTE: this includes some from the previous iteration, however if we make the Converter more advanced, we can't reuse them
+		
+		//Find and add the best 
+		auto best_it = std::min_element( converters.begin(), converters.end(), Converter::less_size );
+		used_converters << *best_it;
+		done << best_it->get_to();
+	}
+	
+	//Fix the order
+	qSort( used_converters.begin(), used_converters.end(), Converter::less_to );
+	
+	
+	//Get all images for saving
+	QList<Image> primitives;
+	for( auto converter : used_converters )
+		primitives << converter.get_primitive().auto_crop();
+	
+	//Get all paths from starting_image to each frame
+	QList<Frame> frames;
+	for( int i=0; i<originals.size(); i++ ){
+		Frame f( primitives );
+		f.layers = Converter::path( used_converters, i, starting_image );
+		frames << f;
+	}
+	
+	
+	auto future2 = QtConcurrent::map( primitives, [&]( auto& img ){ img = img.optimize_filesize( format ); } );
+	showProgress( "Optimizing images", future2 );
+	
+	//Save cgCompress image
+	OraSaver( primitives, frames ).save( name + ".cgcompress", format );
+	return true;
+}
+
 
 /** \return True if 'file' is decoded exactly like this MultiImage
  *  \param [in] file File path for file to validate

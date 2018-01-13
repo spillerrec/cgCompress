@@ -58,8 +58,12 @@ class Converter {
 		int get_size() const{ return size; }
 		
 		/** \return The image used for converting **/
-		Image get_primitive() const{ return (*base_images)[from].difference( (*base_images)[to] ); }
+		Image get_primitive() const;
 		
+		static QList<int> path( const QList<Converter>& converters, int from, int to=0 );
+		
+		static auto less_size( const Converter& a, const Converter& b ){ return a.size < b.size; }
+		static auto less_to(   const Converter& a, const Converter& b ){ return a.to   < b.to  ; }
 };
 
 #endif

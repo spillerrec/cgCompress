@@ -45,6 +45,7 @@ class MultiImage {
 		
 		bool optimize( QString name ) const;
 		bool optimize2( QString name ) const;
+		bool optimize3( QString name ) const;
 		
 		bool validate( QString file ) const;
 };
