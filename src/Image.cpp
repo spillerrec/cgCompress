@@ -16,6 +16,7 @@
 */
 
 #include "Image.hpp"
+#include "FileSizeEval.hpp"
 
 #include <cmath>
 
@@ -408,28 +409,9 @@ int Image::compressed_size( Format format, Format::Precision p ) const{
 int Image::estimate_compressed_size( Format format ) const{
 	if( mask.isNull() )
 		return format.file_size( remove_transparent(), Format::LOW );
-	int diffs = 0;
 	
-	auto w = img.width();
-	for( int iy=0; iy<img.height(); iy++ ){
-		auto row_alpha = mask.constScanLine( iy );
-		auto row = img.row( iy );
-		for( int ix=1; ix<w; ix++ ){
-			auto alpha_left  = row_alpha[ix-1] != PIXEL_DIFFERENT;
-			auto alpha_right = row_alpha[ix  ] != PIXEL_DIFFERENT;
-			diffs += (alpha_left != alpha_right) ? 255 : 0;
-			//TODO: not great for images with transparency
-			//we add the difference in shown pixels
-			if( !(alpha_left || alpha_right) ){
-				QRgb left = row[ix-1], right = row[ix];
-				diffs += abs( qRed(  left) - qRed(  right) );
-				diffs += abs( qGreen(left) - qGreen(right) );
-				diffs += abs( qBlue( left) - qBlue( right) );
-			}
-		}
-	}
-	
-	return diffs;
+	return FileSize::image_gradient_sum( img, mask, PIXEL_DIFFERENT );
+	return FileSize::lz4compress_size( remove_transparent() );
 }
 
 bool Image::mustKeepAlpha() const{

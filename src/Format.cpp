@@ -16,34 +16,10 @@
 */
 
 #include "Format.hpp"
+#include "FileSizeEval.hpp"
 
 #include <QBuffer>
 
-/** Calculates the sum of the absolute difference between touching pixels
- *  
- *  \param [in] img Image to calculate for
- *  \return The computed value
- */
-int image_gradient_sum( QImage img ){
-	int diffs = 0;
-	
-	auto w = img.width();
-	for( int iy=0; iy<img.height(); iy++ ){
-		auto row = (const QRgb*) img.constScanLine( iy );
-		for( int ix=1; ix<w/*img.width()*/; ix++ ){
-			//we add the difference in shown pixels
-			QRgb left = row[ix-1], right = row[ix];
-			diffs += abs( qAlpha(left) - qAlpha(right) );
-			if( ( qAlpha(left) > 0 ) && ( qAlpha(right) > 0 ) ){
-				diffs += abs( qRed(left) - qRed(right) );
-				diffs += abs( qGreen(left) - qGreen(right) );
-				diffs += abs( qBlue(left) - qBlue(right) );
-			}
-		}
-	}
-	
-	return diffs;
-}
 
 /** Compress image to a memory buffer
  *  
@@ -66,7 +42,7 @@ QByteArray Format::to_byte_array( QImage img ) const{
  */
 int Format::file_size( QImage img, Precision p ) const{
 	if( precision_level > 0 && p != HIGH )
-		return image_gradient_sum( img );
+		return FileSize::image_gradient_sum( img );
 	return to_byte_array( img ).size();
 }
 
