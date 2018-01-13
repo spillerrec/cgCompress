@@ -145,8 +145,8 @@ void OraSaver::save( QString path, Format format ) const{
 			//Detect composition mode
 			//TODO: Decide this earlier and change encoding type
 			QString composition = "composite-op=\"cgcompress:alpha-replace\"";
-			if( !primitives[layer].mustKeepAlpha() )
-				composition = "";
+		//	if( !primitives[layer].mustKeepAlpha() )
+		//		composition = "";
 			
 			QString name = QString( "data/%1.%2" ).arg( layer ).arg( format.ext() );
 			stack += QString( "<layer %1 name=\"%2\" src=\"%2\" x=\"%3\" y=\"%4\" />" )
