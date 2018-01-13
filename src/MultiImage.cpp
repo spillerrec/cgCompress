@@ -29,6 +29,7 @@
 #include <QImageReader>
 #include <QtConcurrent>
 #include <QDebug>
+#include <QElapsedTimer>
 
 //TODO: this is used in several places, find a fitting place to have this
 template<typename T>
@@ -105,12 +106,12 @@ void showProgress( const char* description, QFuture<T>& future ){
 	
 	int last = future.progressMinimum();
 	while( !future.isFinished() ){
+		QThread::msleep( 10 );
 		int current = future.progressValue();
 		if( current > last ){
 			progress.update( current - last );
 			last = current;
 		}
-		QThread::msleep( 10 );
 	}
 	
 	future.waitForFinished();
@@ -130,9 +131,18 @@ bool MultiImage::optimize( QString name ) const{
 			converter_para.push_back( { this, i, j } );
 			converter_para.push_back( { this, j, i } );
 		}
+	QElapsedTimer t;
+	t.start();
+	/*/
+	QList<Converter> converters;
+	for( int i=0; i<converter_para.count(); i++ )
+		converters << createConverter( converter_para[i] );
+	/*/
 	auto future1 = QtConcurrent::mapped( converter_para, createConverter );
 	showProgress( "Generating data", future1 );
 	auto converters = future1.results();
+	//*/
+	qDebug() << "Took:" << t.elapsed();
 	
 /*	for( auto converter : converters ){
 		auto name = QString("converter_to_%1_from_%2_%3")
@@ -140,7 +150,7 @@ bool MultiImage::optimize( QString name ) const{
 			.arg( QString::number(converter.get_from()), 3, QLatin1Char('0') )
 			.arg( converter.get_size() )
 			;
-		converter.get_primitive().auto_crop().remove_transparent().save( name, {"webp"} );
+		converter.get_primitive().auto_crop().save( name, {"webp"} );
 	}//*/
 	
 	//Try all originals as the base image, and pick the best one
