@@ -144,6 +144,7 @@ int main( int argc, char* argv[] ){
 			extract_cgcompress( file, format );
 	}
 	else if( options.contains( "--recompress" ) ){
+		files = expandFolders( files );
 		for( auto file : files ){
 			auto images = extract_files( file );
 			QString name( QFileInfo(file).completeBaseName() + ".recompressed" );
