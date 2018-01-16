@@ -96,6 +96,7 @@ class Image {
 		Image combine( Image on_top ) const;
 		
 		Image contain_both( Image diff ) const;
+		struct SplitImage split_shared( Image other ) const;
 		
 		/** Calculates file size of the image; wrapper for Format::file_size()
 		 *  \param [in] format Format used for compression
@@ -107,6 +108,7 @@ class Image {
 			saved_data = to_byte_array( format );
 			return saved_data.size();
 		}
+		int alpha_count() const;
 		
 		Image difference( Image img ) const;
 		Image remove_area( Image img ) const;
@@ -124,6 +126,16 @@ class Image {
 		
 		bool mustKeepAlpha() const;
 		static Image fromTransparent( QImage img );
+};
+
+
+struct SplitImage{
+	Image shared;
+	Image first;
+	Image second;
+	int usefulness { 0 };
+	int index{ -1 };
+	SplitImage() : shared( {0,0}, {} ), first(shared), second(shared) {}
 };
 
 #endif

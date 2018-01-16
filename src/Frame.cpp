@@ -28,4 +28,17 @@ Image Frame::reconstruct() const{
 	return image;
 }
 
+void Frame::update_ids( int from, QList<int> to ){
+	QList<int> new_layers;
+	
+	for( auto layer : layers ){
+		if( layer != from )
+			new_layers << layer;
+		else
+			new_layers << to;
+	}
+	
+	layers = new_layers;
+}
+
 

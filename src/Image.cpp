@@ -238,6 +238,51 @@ Image Image::contain_both( Image input ) const{
 	return newMask( mask_output );
 }
 
+SplitImage Image::split_shared( Image input ) const{
+	//TODO: images must be the same size and at same point
+	if( mask.isNull() ||input.mask.isNull() )
+		return {};
+	
+	
+	//Find the shared area of the two images
+	QImage mask_shared( mask );
+	for( int iy=0; iy<mask.height(); iy++ ){
+		auto in1 =       img.row( iy );
+		auto in2 = input.img.row( iy );
+		
+		auto mask1 =       mask.constScanLine( iy );
+		auto mask2 = input.mask.constScanLine( iy );
+		auto mask_out = mask_shared.scanLine( iy );
+		
+		for( int ix=0; ix<mask.width(); ix++ ){
+			auto mask_match = (mask1[ix] == mask2[ix]) && (mask2[ix] == PIXEL_DIFFERENT);
+			auto pixels_match = in1[ix] == in2[ix];
+			
+			mask_out[ix] = ( mask_match && pixels_match ) ? PIXEL_DIFFERENT : PIXEL_SHARED;
+		}
+	}
+	
+	//Function for removing the shared areas of the masks
+	auto cut_mask = []( QImage mask, QImage cut ){
+			for( int iy=0; iy<mask.height(); iy++ ){
+				auto r_out = mask.     scanLine( iy );
+				auto r_cut = cut .constScanLine( iy );
+				
+				for( int ix=0; ix<mask.width(); ix++ )
+					r_out[ix] = (r_cut[ix] == PIXEL_DIFFERENT) ? PIXEL_SHARED : r_out[ix];
+			}
+			return mask;
+		};
+	
+	SplitImage result;
+	result.shared = Image( this->img, mask_shared );
+	result.first  = Image( this->img, cut_mask( this->mask, mask_shared ) );
+	result.second = Image( input.img, cut_mask( input.mask, mask_shared ) );
+	result.usefulness = -1;
+	
+	return result;
+}
+
 /** Dilate the alpha channel to reduce salt&pepper noise
  *  \param [in] kernel_size How large area around each pixel should be considered
  *  \param [in] threshold How many pixels in the area must be set to enable this pixel
@@ -394,7 +439,7 @@ Image Image::optimize_filesize( Format format ) const{
 int Image::compressed_size( Format format, Format::Precision p ) const{
 	//Use low-precision if not high
 	//NOTE: We cannot use the saved, as it is different
-	if( format.get_precision() != Format::HIGH )
+	if( format.get_precision() > 0 && p != Format::HIGH )
 		return estimate_compressed_size( format );
 	
 	//If we already have compressed it, use that
@@ -412,6 +457,20 @@ int Image::estimate_compressed_size( Format format ) const{
 	
 	return FileSize::image_gradient_sum( img, mask, PIXEL_DIFFERENT );
 	return FileSize::lz4compress_size( remove_transparent() );
+}
+
+int Image::alpha_count() const{
+	if( mask.isNull() )
+		qFatal( "Image::alpha_count() not implemented for RGB" );
+	
+	int count = 0;
+	for( int iy=0; iy<mask.height(); iy++ ){
+		auto row = mask.scanLine( iy );
+		for( int ix=0; ix<mask.width(); ix++ )
+			count += (row[ix] == PIXEL_DIFFERENT) ? 1 : 0;
+	}
+	
+	return count;
 }
 
 bool Image::mustKeepAlpha() const{

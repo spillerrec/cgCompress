@@ -82,6 +82,7 @@ static void reuse_planes( QList<Image>& primitives, QList<Frame>& frames ){
 			if( result.is_valid() ){
 				primitives[i] = result;
 				primitives[j] = Image( {0,0}, QImage() );
+				qDebug( "   Combining difference %d and %d", i, j );
 				
 				for( auto& frame : frames )
 					for( auto& layer : frame.layers )
@@ -90,6 +91,81 @@ static void reuse_planes( QList<Image>& primitives, QList<Frame>& frames ){
 			}
 		}
 	}
+}
+
+static void reuse_planes2( QList<Image>& primitives, QList<Frame>& frames, Format format ){
+	reuse_planes( primitives, frames );
+	
+	int amount_saved = 0;
+	
+	for( int i=0; i<primitives.size(); i++ ){
+		if( !primitives[i].is_valid() )
+			continue;
+		
+		//Try all possible combinations with later primitives, but only save those which can be shared
+		QList<SplitImage> splits;
+		for( int j=i+1; j<primitives.size(); j++ ){
+			if( !primitives[j].is_valid() )
+				continue;
+			
+			auto split = primitives[i].split_shared( primitives[j] );
+			split.index = j;
+			if( split.shared.auto_crop().is_valid() )
+				splits << split;
+		}
+		
+		
+		if( splits.size() > 0 ){
+			auto size_estim = [&](auto& img){ return img.auto_crop().compressed_size( format, Format::MEDIUM ); };
+			auto size_exact = [&](auto& img){ return img.auto_crop().compressed_size( format, Format::HIGH   ); };
+			
+			//Calculate estimated file savings
+			auto prim_i_size = size_estim( primitives[i] );
+			for( int k=0; k<splits.size(); k++ ){
+				//TODO: If it is used in multiple frames, our savings would increase
+				auto& split = splits[k];
+				auto new_size = size_estim( split.shared ) + size_estim( split.first ) + size_estim( split.second );
+				auto old_size = prim_i_size + size_estim( primitives[split.index] );
+				split.usefulness = old_size - new_size;
+			}
+			
+			//Pick the best one
+			auto best = std::max_element( splits.begin(), splits.end(), [](auto&a,auto&b){ return a.usefulness < b.usefulness; } );
+			if( best != splits.end() ){
+				//Do an exact evaluation of saved filesize
+				auto normal_size = size_exact( primitives[i] ) + size_exact( primitives[best->index] );
+				auto new_size = size_exact( best->shared ) + size_exact( best->first ) + size_exact( best->second );
+				auto size_saved = normal_size - new_size;
+				
+				//Update if we save at least 128 bytes
+				if( size_saved > 128 ){ //TODO: cutoff point is a constant
+					qDebug( "   Extracting shared parts of difference %d and %d, saving %d bytes", i, best->index, size_saved );
+					amount_saved += size_saved;
+				
+					//Change the primitives
+					primitives[i          ] = Image( {}, {} );
+					primitives[best->index] = Image( {}, {} );
+					auto start_pos = primitives.size();
+					primitives << best->shared;
+					primitives << best->first;
+					primitives << best->second;
+					if( !best->shared.is_valid() || !best->first.is_valid() || !best->second.is_valid() )
+						qFatal( "Not all splitted images are valid" );
+					//TODO: Handle those cases
+					
+					//Update the frames with the new primitives
+					for( auto& frame : frames ){
+						frame.update_ids( i,           {start_pos+1, start_pos+0} );
+						frame.update_ids( best->index, {start_pos+2, start_pos+0} );
+						frame.primitives = primitives;
+					}
+				}
+			}
+			
+		}
+	}
+	
+	qDebug( "   Extracting saved %d bytes", amount_saved );
 }
 
 /** Create an efficient composite version and save it to a cgCompress file.
@@ -152,8 +228,6 @@ bool MultiImage::optimize( QString name ) const{
 			for( int i=0; i<originals.size(); i++ )
 				frames << Frame( primitives, Converter::path( used_converters, i, best_start ) );
 			
-			reuse_planes( primitives, frames );
-			
 			//Evaluate file size and overwrite old solution if better
 			int filesize = 0;
 			if( test_amount > 0 ) //Skip this for the simple 1-test case
@@ -167,8 +241,11 @@ bool MultiImage::optimize( QString name ) const{
 		}
 	}
 	
+	qDebug( "Revaluating differences (%d)", final_primitives.size() );
+	reuse_planes2( final_primitives, final_frames, format );
+	
 	auto future2 = QtConcurrent::map( final_primitives, [&]( auto& img ){ img = img.optimize_filesize( format ); } );
-	ProgressBar::showFuture( "Optimizing images", future2 );
+	ProgressBar::showFuture( "Optimizing final images", future2 );
 	
 	OraSaver( final_primitives, final_frames ).save( name + ".cgcompress", format );
 	return true;
@@ -208,6 +285,15 @@ bool MultiImage::optimize2( QString name ) const{
 		ImageMask mask( originals[i].qimg().size() );
 		mask.fill( 0 );
 		
+		//*/
+		for( int j=0; j<originals.count(); j++ ){
+			auto path = QString("simitest/img %1 - %2.png")
+				.arg( QString::number(i), 3, QLatin1Char('0') )
+				.arg( QString::number(j), 3, QLatin1Char('0') )
+				;
+			similarities.getImagePart( i, j ).auto_crop().qimg().save( path );
+		}
+		/*/
 		for( int j=0; j<originals.count(); j++ ){
 			mask.combineMasks( similarities.getMask( j, i ) );
 		}
@@ -216,6 +302,7 @@ bool MultiImage::optimize2( QString name ) const{
 				.arg( QString::number(i), 3, QLatin1Char('0') )
 			;
 		mask.apply( originals[i].qimg() ).auto_crop().save( path, {"webp"} );
+		//*/
 	}
 	
 	

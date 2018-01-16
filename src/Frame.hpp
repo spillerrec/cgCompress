@@ -37,6 +37,8 @@ class Frame {
 			: primitives( primitives ), layers( layers ) { }
 		
 		Image reconstruct() const;
+		
+		void update_ids( int from, QList<int> to );
 };
 
 #endif

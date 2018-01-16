@@ -70,7 +70,7 @@ class ImageSimilarities {
 		
 	public:
 		void addImage( QImage img );
-		QImage getImagePart( int id, int ref );
+		Image getImagePart( int id, int ref );
 		ImageMask getMask( int id, int ref );
 };
 

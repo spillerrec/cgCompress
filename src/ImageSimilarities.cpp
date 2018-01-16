@@ -151,5 +151,5 @@ ImageMask ImageSimilarities::getMask( int id, int ref ){
 	return refs[id].getMaskOf(ref);
 }
 
-//QImage ImageSimilarities::getImagePart( int id, int ref )
-//	{ return getMask( id, ref ).apply( originals[id] ); }
+Image ImageSimilarities::getImagePart( int id, int ref )
+	{ return getMask( id, ref ).apply( originals[id] ); }
