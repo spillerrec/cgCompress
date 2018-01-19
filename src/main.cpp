@@ -30,7 +30,7 @@ using namespace std;
 
 /** Print version number to stdout */
 static void print_version(){
-	cout << "cgCompress - version 0.0.1 (pre-alpha)" << endl;
+	cout << "cgCompress - version 1.0.0 (beta)" << endl;
 }
 
 /** Print usage info to stdout */
