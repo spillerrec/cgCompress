@@ -29,12 +29,12 @@
 using namespace std;
 
 /** Print version number to stdout */
-void print_version(){
+static void print_version(){
 	cout << "cgCompress - version 0.0.1 (pre-alpha)" << endl;
 }
 
 /** Print usage info to stdout */
-void print_help(){
+static void print_help(){
 	cout << "Usage:" << endl;
 	cout << "cgCompress [options] [files]" << endl;
 	cout << endl;
@@ -57,7 +57,7 @@ void print_help(){
  *  \param [in] name of the parameter, without "--" and "="
  *  \return The value of XXX, or QString() if not found
  */
-QString get_option_value( QStringList options, QString name ){
+static QString get_option_value( QStringList options, QString name ){
 	name = "--" + name + "=";
 	for( auto opt : options )
 		if( opt.startsWith( name ) )
@@ -65,35 +65,32 @@ QString get_option_value( QStringList options, QString name ){
 	return QString();
 }
 
-/** Retrieve format settings from the input arguments.
- *  --format=XXX changes format
- *  --quality=X changes quality of estimation
- *  
- *  \param [in] options Arguments supplied to program
- *  \return Format XXX, default if not supplied
- */
-Format get_format( QStringList options ){
+static QString parse_format( QString input ){
 	auto supported = QImageReader::supportedImageFormats();
 	
-	//Get quality
-	int level = get_option_value( options, "quality" ).toInt();
-	
-	//Get user-defined format
-	QString format = get_option_value( options, "format" ).toLower();
-	if( !format.isEmpty() ){
-		if( supported.contains( format.toLatin1() ) ){
-			Format f( format );
-			f.set_precision( level );
-			return f;
-		}
+	input = input.toLower();
+	if( !input.isEmpty() ){
+		if( supported.contains( input.toLatin1() ) )
+			return input;
 		else
-			qWarning( "Format '%s' not supported, using default", format.toLocal8Bit().constData() );
+			qWarning( "Format '%s' not supported, using default", input.toLocal8Bit().constData() );
 	}
 	
 	//Use webp as default if available, otherwise use png
-	Format f( supported.contains( "webp" ) ?	"webp" : "png" );
-	f.set_precision( level );
-	return f;
+	return supported.contains( "webp" ) ? "webp" : "png";
+}
+
+static int parse_int( QString input, int default_value=0 ){
+	if( input.isEmpty() )
+		return default_value;
+	
+	bool ok = false;
+	int converted = input.toInt( &ok );
+	if( ok )
+		return converted;
+	
+	qDebug( "Integer '%s' not valid, using default of '%d'", input.toLocal8Bit().constData(), default_value );
+	return default_value;
 }
 
 static int optimizeImage( MultiImage& img, QString output_path ){
@@ -121,7 +118,11 @@ int main( int argc, char* argv[] ){
 		else
 			files << arg;
 	
-	Format format = get_format( options );
+	//Get user-defined format
+	Format format( parse_format( get_option_value( options, "format" ) ) );
+	
+	//Get quality
+	format.set_precision( parse_int( get_option_value( options, "quality" ), 1 ) );
 	
 	auto convert_img = [&]( QImage img ){
 			if( options.contains( "--noalpha" ) )

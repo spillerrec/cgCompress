@@ -15,7 +15,7 @@ cgCompress is an attempt to automatize this process, and reduce file size as muc
 Changes the image compression format. Replace XXX with the file extension of the wanted format, e.g. "png".
 
     --quality=X
-Provides a file-size/compression-time trade-off. A value of 0 means maximum compression, while higher values will be faster, at the cost of potentially higher file-sizes. Currently 1 is the fastest value.
+Provides a file-size/compression-time trade-off. A value of 0 means maximum compression, while higher values will be faster, at the cost of potentially higher file-sizes. Currently 1 is the fastest value which is also the default.
 
 ### Option - operations
 
@@ -45,7 +45,7 @@ Removes any color value for fully transparent pixels and sets it to black. This 
 
 ## Status
 
-- Prof of concept
+- Works very well, especially with large amount of images
 - A greedy algorithm have been implemented which is O( n^2 ) instead of O( n^n ), but it does not guaranty optimal solutions. It does however produce pretty good results, but it needs to be evaluated.
 - Segmentation needs to be redone, and done with respect to file size.
 - Some images contain the same image, but with color changes. Some success have been had with alternative composite methods, but still needs to be further investigated.
@@ -61,7 +61,7 @@ A custom image format is used for output. It is based on OpenRaster with the fol
 
 Qt5 plug-in for loading cgCompress images can be found here: https://github.com/spillerrec/qt5-cgcompress-plugin
 
-For thumbnail support in Windows, you can use the following extension: https://github.com/spillerrec/shell-ora-extension
+For thumbnail support in Windows, you can use the following extension: https://github.com/spillerrec/shell-cgcompress-extension
 
 Notice that not any OpenRaster thumbnailer will work, as cgCompress allows for thumbnails in any format, while the OpenRaster specification requires the use of PNG.
 
@@ -76,6 +76,7 @@ Notice that not any OpenRaster thumbnailer will work, as cgCompress allows for t
 *Recommended*:
 
 A Qt plug-in with lossless webp output for higher compression. It is assumed that a quality of 100 will produce lossless compressed images. Qualities below 100 may produce lossy compressed images and this can be used for the thumbnails. If quality 100 *does not* produce lossless images, the result *will* be completely destroyed.
+Notice that the official webp plugin in the extra plugins module is not supported as it is only visually lossless. cgCompress stores blending information in the transparent pixels, so it will fail.
 
 Plug-ins for writing WebP images which supports lossless can be found here:
 - Qt4: https://github.com/stevenyao/webp
