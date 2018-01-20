@@ -39,6 +39,8 @@ class Frame {
 		Image reconstruct() const;
 		
 		void update_ids( int from, QList<int> to );
+		
+		void remove_pointless_layers();
 };
 
 #endif

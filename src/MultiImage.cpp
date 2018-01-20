@@ -139,7 +139,7 @@ static void reuse_planes2( QList<Image>& primitives, QList<Frame>& frames, Forma
 				
 				//Update if we save at least 128 bytes
 				if( size_saved > 128 ){ //TODO: cutoff point is a constant
-					qDebug( "   Extracting shared parts of difference %d and %d, saving %d bytes", i, best->index, size_saved );
+				//	qDebug( "   Extracting shared parts of difference %d and %d, saving %d bytes", i, best->index, size_saved );
 					amount_saved += size_saved;
 				
 					//Change the primitives
@@ -159,6 +159,7 @@ static void reuse_planes2( QList<Image>& primitives, QList<Frame>& frames, Forma
 						frame.update_ids( best->index, {start_pos+2, start_pos+0} );
 						frame.primitives = primitives;
 					}
+					qDebug( "   Extracting shared parts of difference %d and %d, to {%d,%d} and {%d,%d}, saving %d bytes", i, best->index, start_pos+1, start_pos+0,start_pos+2,start_pos+0, size_saved );
 				}
 			}
 			
@@ -241,11 +242,15 @@ bool MultiImage::optimize( QString name ) const{
 		}
 	}
 	
-	qDebug( "Revaluating differences (%d)", final_primitives.size() );
+	qDebug( "\nRevaluating differences (%d+)", final_primitives.size() );
 	reuse_planes2( final_primitives, final_frames, format );
 	
 	auto future2 = QtConcurrent::map( final_primitives, [&]( auto& img ){ img = img.optimize_filesize( format ); } );
 	ProgressBar::showFuture( "Optimizing final images", future2 );
+	
+	//TODO: Known not to work on transparent images
+	//for( auto& frame : final_frames )
+	//	frame.remove_pointless_layers();
 	
 	OraSaver( final_primitives, final_frames ).save( name + ".cgcompress", format );
 	return true;
@@ -389,6 +394,7 @@ bool MultiImage::validate( QString file ) const{
 		auto img2 = originals[i].qimg().convertToFormat( QImage::Format_ARGB32 );
 		
 		if( img1 != img2 ){
+			qDebug( "Error found at image %d!", i+1 );
 			img1.save( "error-decoded.png" );
 			img2.save( "error-expected.png" );
 			return false;

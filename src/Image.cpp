@@ -159,9 +159,9 @@ Image Image::combine( Image on_top ) const{
 	
 	QImage output( width, height, QImage::Format_ARGB32 );
 	output.fill( 0 );
-	QPainter painter( &output );
-	painter.drawImage(        get_pos()-tl,        qimg() );
-	painter.drawImage( on_top.get_pos()-tl, on_top.qimg() );
+	QPainter painter( &output ); //TODO: support cgcompress:alpha-replace
+	painter.drawImage(        get_pos()-tl,        remove_transparent() );
+	painter.drawImage( on_top.get_pos()-tl, on_top.remove_transparent() );
 	
 	return Image( tl, output ); //TODO:
 }

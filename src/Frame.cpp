@@ -41,4 +41,26 @@ void Frame::update_ids( int from, QList<int> to ){
 	layers = new_layers;
 }
 
+void Frame::remove_pointless_layers(){
+	//Final result, anything we do must not change this!
+	auto truth = reconstruct();
+	
+	//Try to remove each layer one at a time
+	for( int k=1; k<layers.size(); k++ ){ //TODO: make it possible to remove the first layer as well
+		Image image( primitives[layers[0]] );
+		for( int i=1; i<layers.size(); i++ )
+			if( i != k && layers[i] != -1 )
+				image = image.combine( primitives[layers[i]] );
+		
+		//Did it cause any change? If not then we can remove it
+		if( image == truth ){
+			qDebug( "Found pointless layer %d", layers[k] );
+			layers[k] = -1;
+		}
+	}
+	
+	//Properly remove the layers we marked as pointless
+	layers.removeAll( -1 );
+}
+
 
