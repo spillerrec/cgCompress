@@ -19,6 +19,7 @@
 
 #include <lz4.h>
 #include <lz4hc.h>
+#include <lzma.h>
 
 #include <vector>
 
@@ -31,8 +32,36 @@ int lz4compress_size( const unsigned char* data, unsigned size ){
 	return LZ4_compress_HC(
 			(const char*)data, (char*)buffer.data()
 		,	size, buffer.size()
-		,	LZ4HC_DEFAULT_CLEVEL //TODO: Higher?
+		,	LZ4HC_MAX_CLEVEL //TODO: Higher?
 		);
+}
+
+
+int lzma_compress_size( const unsigned char* data, unsigned size ){
+	//Initialize LZMA
+	lzma_stream strm = LZMA_STREAM_INIT;
+	if( lzma_easy_encoder( &strm, 9 | LZMA_PRESET_EXTREME, LZMA_CHECK_CRC64 ) != LZMA_OK )
+		return {};
+	
+	std::vector<uint8_t> out( size*2 ); //TODO: Find value properly
+	//Setup in/out buffers
+	strm.next_in  = (uint8_t*)data;
+	strm.avail_in = size;
+	strm.next_out  = out.data();
+	strm.avail_out = out.size();
+	
+	//Compress
+	lzma_ret ret = lzma_code( &strm, LZMA_FINISH );
+	if( ret != LZMA_STREAM_END ){
+		lzma_end( &strm ); //TODO: Use RAII
+		return {};
+	}
+	
+	lzma_end( &strm );
+	
+	//Return only the range actually needed
+	//return out.left( out.size() - strm.avail_out );
+	return out.size() - strm.avail_out;
 }
 
 }

@@ -4,7 +4,7 @@ INCLUDEPATH += .
 CONFIG += console
 QT += concurrent
 
-LIBS += -lz -llz4
+LIBS += -lz -llz4 -llzma
 
 # Input
 HEADERS += src/Compression.hpp src/CsvWriter.hpp src/Image.hpp src/Frame.hpp src/ImageSimilarities.hpp src/MultiImage.hpp src/Converter.hpp src/OraSaver.hpp src/FileUtils.hpp src/Format.hpp src/FileSizeEval.hpp src/ProgressBar.hpp

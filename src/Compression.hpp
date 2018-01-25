@@ -22,6 +22,7 @@
 namespace FileSize{
 
 int lz4compress_size( const unsigned char*, unsigned size );
+int lzma_compress_size( const unsigned char*, unsigned size );
 
 }
 

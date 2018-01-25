@@ -103,7 +103,7 @@ void evaluate_cgcompress( QStringList files ){
 		csv.write( int(data.size()) );
 		
 		//LZMA compressed
-		csv.write( -1 ); //TODO:
+		csv.write( FileSize::lzma_compress_size( reinterpret_cast<const unsigned char*>(data.data().constData()), data.size() ) );
 		
 		//LZ4 compression
 		csv.write( FileSize::lz4compress_size( reinterpret_cast<const unsigned char*>(data.data().constData()), data.size() ) );
