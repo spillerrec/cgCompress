@@ -49,6 +49,7 @@ static void print_help(){
 	cout << "\t" << "--combined     Combine several cgCompress files into one" << endl;
 	cout << "\t" << "--noalpha      Remove alpha channel from input images" << endl;
 	cout << "\t" << "--discard-transparent  Remove pixel values from transparent pixels" << endl;
+	cout << "\t" << "--evaluate     Write a CSV file which evaluates filesize compared to other formats" << endl;
 }
 
 /** Retrieves XXX from --name=XXX
@@ -139,6 +140,9 @@ int main( int argc, char* argv[] ){
 	else if( options.contains( "--pack"    ) ){
 		for( auto file : files )
 			pack_directory( file );
+	}
+	else if( options.contains( "--evaluate" ) ){
+		evaluate_cgcompress( expandFolders( files ) );
 	}
 	else if( options.contains( "--extract" ) ){
 		for( auto file : files )

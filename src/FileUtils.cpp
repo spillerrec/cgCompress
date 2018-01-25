@@ -17,12 +17,16 @@
 
 #include "FileUtils.hpp"
 
+#include <QBuffer>
 #include <QFileInfo>
 #include <QImageReader>
 #include <QFile>
 
 #include <QDebug>
 
+#include "Format.hpp"
+#include "Compression.hpp"
+#include "CsvWriter.hpp"
 #include "OraSaver.hpp"
 
 /** Extracts the images in a cgCompress file.
@@ -73,6 +77,54 @@ void extract_cgcompress( QString filename, Format format ){
 	
 	for( auto file2 : extract_files( filename ) )
 		format.save( file2.second, current.absolutePath() + "/" + file.baseName() + file2.first + "." + file.suffix() );
+}
+
+void evaluate_cgcompress( QStringList files ){
+	CsvWriter csv( "evaluatation.csv", {"File", "Image count", "BMP size", "LZMA size", "LZ4 size", "cgCompress size", "PNG size", "WebP size"} );
+	
+	for( auto file : files ){
+		qDebug( "Evaluating %s", file.toLocal8Bit().constData() );
+		auto images = extract_files( file );
+		if( images.size() == 0 ){
+			qDebug( "Failed to extract file:  %s", file.toLocal8Bit().constData() );
+			continue;
+		}
+		
+		//File name
+		csv.write( file );
+		
+		csv.write( images.size() );
+		
+		//BMP size
+		QBuffer data;
+		data.open( QBuffer::ReadWrite );
+		for( auto image : images )
+			data.write( Format( "bmp" ).to_byte_array( image.second ) );
+		csv.write( int(data.size()) );
+		
+		//LZMA compressed
+		csv.write( -1 ); //TODO:
+		
+		//LZ4 compression
+		csv.write( FileSize::lz4compress_size( reinterpret_cast<const unsigned char*>(data.data().constData()), data.size() ) );
+		
+		//cgCompress size
+		csv.write( int(QFileInfo( file ).size()) );
+		
+		//PNG file size
+		uint64_t png_size = 0;
+		for( auto image : images )
+			png_size += Format( "bmp" ).to_byte_array( image.second ).size();
+		csv.write( int(png_size) );
+		
+		//WebP file size
+		uint64_t webp_size = 0;
+		for( auto image : images )
+			webp_size += Format( "webp" ).to_byte_array( image.second ).size();
+		csv.write( int(webp_size) );
+		
+		csv.stop();
+	}
 }
 
 /** Add all files in a sub-directory to files. File name will be "sub_dir/filename".

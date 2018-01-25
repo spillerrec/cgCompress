@@ -17,20 +17,11 @@
 
 #include "FileSizeEval.hpp"
 #include "SubQImage.hpp"
-
-#include <lz4.h>
-#include <lz4hc.h>
+#include "Compression.hpp"
 
 
 static int compressed_lz4_size( const std::vector<uint8_t>& data ){
-	auto max_size = LZ4_compressBound( data.size() );
-	std::vector<uint8_t> buffer( max_size );
-	
-	return LZ4_compress_HC(
-			(const char*)data.data(), (char*)buffer.data()
-		,	data.size(), buffer.size()
-		,	LZ4HC_DEFAULT_CLEVEL //TODO: Higher?
-		);
+	return FileSize::lz4compress_size( data.data(), data.size() );
 }
 
 

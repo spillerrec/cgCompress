@@ -15,29 +15,29 @@
 	along with cgCompress.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef FILE_UTILS_HPP
-#define FILE_UTILS_HPP
+#ifndef CSV_WRITER_HPP
+#define CSV_WRITER_HPP
 
+#include <QList>
+#include <QFile>
 #include <QString>
-#include <QDir>
-#include <QImage>
+#include <QStringList>
 
-#include "Format.hpp"
-
-QList<std::pair<QString,QImage>> extract_files( QString filename );
-
-void extract_cgcompress( QString filename, Format format );
-
-void evaluate_cgcompress( QStringList files );
-
-void pack_directory( QDir dir );
-
-bool isSimilar( QImage img1, QImage img2 );
-
-QStringList expandFolders( QStringList files );
-
-QImage discardTransparent( QImage img, QRgb discard_color = qRgb(0,0,0) );
-QImage withoutAlpha( QImage img );
+class CsvWriter {
+	private:
+		QFile file;
+		
+	public:
+		CsvWriter( QString path, QStringList headers );
+		
+		CsvWriter& writeRaw( QString value );
+		CsvWriter& write( QString item );
+		CsvWriter& write( int value );
+		CsvWriter& write( double value );
+		void stop();
+		
+		//TODO: Variatic template
+};
 
 #endif
 

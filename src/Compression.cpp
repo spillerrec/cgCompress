@@ -15,29 +15,24 @@
 	along with cgCompress.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef FILE_UTILS_HPP
-#define FILE_UTILS_HPP
+#include "Compression.hpp"
 
-#include <QString>
-#include <QDir>
-#include <QImage>
+#include <lz4.h>
+#include <lz4hc.h>
 
-#include "Format.hpp"
+#include <vector>
 
-QList<std::pair<QString,QImage>> extract_files( QString filename );
+namespace FileSize{
 
-void extract_cgcompress( QString filename, Format format );
+int lz4compress_size( const unsigned char* data, unsigned size ){
+	auto max_size = LZ4_compressBound( size );
+	std::vector<unsigned char> buffer( max_size );
+	
+	return LZ4_compress_HC(
+			(const char*)data, (char*)buffer.data()
+		,	size, buffer.size()
+		,	LZ4HC_DEFAULT_CLEVEL //TODO: Higher?
+		);
+}
 
-void evaluate_cgcompress( QStringList files );
-
-void pack_directory( QDir dir );
-
-bool isSimilar( QImage img1, QImage img2 );
-
-QStringList expandFolders( QStringList files );
-
-QImage discardTransparent( QImage img, QRgb discard_color = qRgb(0,0,0) );
-QImage withoutAlpha( QImage img );
-
-#endif
-
+}
