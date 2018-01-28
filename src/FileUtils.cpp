@@ -155,7 +155,7 @@ static void append_all_files( QList<std::pair<QString,QByteArray>>& files, QDir 
  *  
  *  \param [in] dir Path to the directory
  */
-void pack_directory( QDir dir ){
+void pack_directory( QDir dir, QString name_extension ){
 	if( !dir.exists() ){
 		qWarning( "Path must be a directory!" );
 		return;
@@ -184,7 +184,7 @@ void pack_directory( QDir dir ){
 	//Get data files
 	append_all_files( files, dir, "data" );
 	
-	OraSaver::save( dir.dirName() + ".packed.cgcompress", mimetype, stack, files );
+	OraSaver::save( dir.dirName() + name_extension + ".cgcompress", mimetype, stack, files );
 }
 
 bool isSimilar( QImage img1, QImage img2 ){

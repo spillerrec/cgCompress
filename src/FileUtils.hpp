@@ -30,7 +30,7 @@ void extract_cgcompress( QString filename, Format format );
 
 void evaluate_cgcompress( QStringList files );
 
-void pack_directory( QDir dir );
+void pack_directory( QDir dir, QString name_extension );
 
 bool isSimilar( QImage img1, QImage img2 );
 

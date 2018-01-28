@@ -56,14 +56,15 @@ static void print_help(){
  *  
  *  \param [in] options Arguments supplied to program
  *  \param [in] name of the parameter, without "--" and "="
+ *  \param [in] default_value Value if argument was not found
  *  \return The value of XXX, or QString() if not found
  */
-static QString get_option_value( QStringList options, QString name ){
+static QString get_option_value( QStringList options, QString name, QString default_value={} ){
 	name = "--" + name + "=";
 	for( auto opt : options )
 		if( opt.startsWith( name ) )
 			return opt.right( opt.size() - name.size() );
-	return QString();
+	return default_value;
 }
 
 static QString parse_format( QString input ){
@@ -125,6 +126,10 @@ int main( int argc, char* argv[] ){
 	//Get quality
 	format.set_precision( parse_int( get_option_value( options, "quality" ), 1 ) );
 	
+	//An optional string to append to the end of newly created files
+	//TODO: might not be used everywhere
+	auto name_extension = get_option_value( options, "name-extension" );
+	
 	auto convert_img = [&]( QImage img ){
 			if( options.contains( "--noalpha" ) )
 				img = withoutAlpha( img );
@@ -138,8 +143,10 @@ int main( int argc, char* argv[] ){
 	if(      options.contains( "--help"    ) ) print_help();
 	else if( options.contains( "--version" ) ) print_version();
 	else if( options.contains( "--pack"    ) ){
+		if( name_extension.isNull() )
+			name_extension = ".packed";
 		for( auto file : files )
-			pack_directory( file );
+			pack_directory( file, name_extension );
 	}
 	else if( options.contains( "--evaluate" ) ){
 		evaluate_cgcompress( expandFolders( files ) );
@@ -149,10 +156,12 @@ int main( int argc, char* argv[] ){
 			extract_cgcompress( file, format );
 	}
 	else if( options.contains( "--recompress" ) ){
+		if( name_extension.isNull() )
+			name_extension = ".recompresseed";
 		files = expandFolders( files );
 		for( auto file : files ){
 			auto images = extract_files( file );
-			QString name( QFileInfo(file).completeBaseName() + ".recompressed" );
+			QString name( QFileInfo(file).completeBaseName() + name_extension );
 			
 			MultiImage multi_img( format );
 			for( auto image : images )
@@ -167,7 +176,7 @@ int main( int argc, char* argv[] ){
 			for( auto image : extract_files( file ) )
 				multi_img.append( Image( convert_img( image.second ) ) );
 		
-		optimizeImage( multi_img, QFileInfo(files[0]).completeBaseName() );
+		optimizeImage( multi_img, QFileInfo(files[0]).completeBaseName() + name_extension );
 	}
 	else{
 		files = expandFolders( files );
@@ -196,7 +205,7 @@ int main( int argc, char* argv[] ){
 				last = current;
 			}
 			
-			optimizeImage( multi_img, name );
+			optimizeImage( multi_img, name + name_extension );
 			start += multi_img.count();
 		}
 	}
