@@ -77,11 +77,9 @@ class Format {
 		 *  
 		 *  \param [in] img Image to save
 		 *  \param [in] path File system path, without extension
-		 *  \return true on sucess
+		 *  \return true on success
 		 */
-		bool save( QImage img, QString path ) const{
-			return img.save( filename(path), ext(), get_quality() );
-		}
+		bool save( QImage img, QString path ) const;
 		
 		QByteArray to_byte_array( QImage img ) const;
 		

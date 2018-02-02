@@ -80,7 +80,7 @@ void extract_cgcompress( QString filename, Format format ){
 }
 
 void evaluate_cgcompress( QStringList files ){
-	CsvWriter csv( "evaluatation.csv", {"File", "Image count", "BMP size", "LZMA individually", "LZMA size", "LZ4 size", "cgCompress size", "PNG size", "WebP size"} );
+	CsvWriter csv( "evaluatation.csv", {"File", "Width", "Height", "Image count", "BMP size", "LZMA individually", "LZMA size", "LZ4 size", "cgCompress size", "PNG size", "WebP size"} );
 	
 	for( auto file : files ){
 		qDebug( "Evaluating %s", file.toLocal8Bit().constData() );
@@ -93,18 +93,20 @@ void evaluate_cgcompress( QStringList files ){
 		//File name
 		csv.write( file );
 		
+		csv.write( images[0].second.width() );
+		csv.write( images[0].second.height() );
 		csv.write( images.size() );
 		
 		//BMP size
 		QBuffer data;
 		data.open( QBuffer::ReadWrite );
 		for( auto image : images )
-			data.write( Format( "bmp" ).to_byte_array( image.second ) );
+			data.write( Format( "raw" ).to_byte_array( image.second ) );
 		csv.write( int(data.size()) );
 		
 		uint64_t lzma_size = 0;
 		for( auto image : images ){
-			auto array = Format( "bmp" ).to_byte_array( image.second );
+			auto array = Format( "raw" ).to_byte_array( image.second );
 			lzma_size += FileSize::lzma_compress_size( reinterpret_cast<const unsigned char*>(array.data()), array.size() );
 		}
 		csv.write( int(lzma_size) );

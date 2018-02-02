@@ -19,6 +19,30 @@
 #include "FileSizeEval.hpp"
 
 #include <QBuffer>
+#include <QByteArray>
+
+static QByteArray to_raw_data( QImage img ){
+	img = img.convertToFormat( QImage::Format_ARGB32 );
+	auto alpha = true; //Always including alpha actually seems to work better
+	
+	//Construct image
+	auto pixel_size = alpha ? 4 : 3;
+	QByteArray data( img.width()*img.height()*pixel_size, 0 );
+	
+	for( int iy=0; iy<img.height(); iy++ ){
+		auto row = (const QRgb*)img.constScanLine( iy );
+		for( int ix=0; ix<img.width(); ix++ ){
+			auto offset = iy*img.width()*pixel_size + ix*pixel_size;
+			data[offset + 0] = qRed(   row[ix] );
+			data[offset + 1] = qGreen( row[ix] );
+			data[offset + 2] = qBlue(  row[ix] );
+			if( alpha )
+				data[offset + 3] = qAlpha( row[ix] );
+		}
+	}
+	
+	return data;
+}
 
 
 /** Compress image to a memory buffer
@@ -27,11 +51,22 @@
  *  \return buffer containing the compressed image
  */
 QByteArray Format::to_byte_array( QImage img ) const{
+	if( format.toLower() == "raw" )
+		return to_raw_data( img );
+	
 	QByteArray data;
 	QBuffer buffer( &data );
 	buffer.open( QIODevice::WriteOnly );
 	img.save( &buffer, ext(), get_quality() );
 	return data;
+}
+
+bool Format::save( QImage img, QString path ) const{
+	if( format.toLower() == "raw" ){
+		qWarning( "RAW mode should not be saved, only available as to_byte_array()" );
+		return false;
+	}
+	return img.save( filename(path), ext(), get_quality() );
 }
 
 /** Estimate file size when compressed
