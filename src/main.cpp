@@ -24,6 +24,7 @@
 #include "Format.hpp"
 #include "MultiImage.hpp"
 #include "FileUtils.hpp"
+#include "ImageOptim.hpp"
 
 #include <iostream>
 using namespace std;
@@ -150,6 +151,17 @@ int main( int argc, char* argv[] ){
 	}
 	else if( options.contains( "--evaluate" ) ){
 		evaluate_cgcompress( expandFolders( files ) );
+	}
+	else if( options.contains( "--diff-test" ) ){
+		auto file1 = QImage( files[0] );
+		auto file2 = QImage( files[1] );
+		ImageDiff( file2, file1, 3 );
+	}
+	else if( options.contains( "--diff-test-apply" ) ){
+		auto file1 = QImage( files[0] );
+		auto file2 = QImage( "ImageDiff-diff.webp" );
+		auto file3 = QImage( "ImageDiff-overlay.webp" );
+		ImageDiffCombine( file1, file2, file3 );
 	}
 	else if( options.contains( "--extract" ) ){
 		for( auto file : files )
