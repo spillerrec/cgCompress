@@ -32,7 +32,7 @@ int lz4compress_size( const unsigned char* data, unsigned size ){
 	return LZ4_compress_HC(
 			(const char*)data, (char*)buffer.data()
 		,	size, buffer.size()
-		,	LZ4HC_MAX_CLEVEL //TODO: Higher?
+		,	LZ4HC_CLEVEL_MAX //TODO: Higher?
 		);
 }
 
