@@ -4,11 +4,11 @@ INCLUDEPATH += .
 CONFIG += console
 QT += concurrent
 
-LIBS += -lz -llz4 -llzma
+LIBS += -lz -llz4 -llzma -lwebp
 
 # Input
-HEADERS += src/Compression.hpp src/CsvWriter.hpp src/Image.hpp src/Frame.hpp src/ImageSimilarities.hpp src/MultiImage.hpp src/Converter.hpp src/OraSaver.hpp src/FileUtils.hpp src/Format.hpp src/FileSizeEval.hpp src/ImageOptim.hpp src/ProgressBar.hpp
-SOURCES += src/Compression.cpp src/CsvWriter.cpp src/Image.cpp src/Frame.cpp src/ImageSimilarities.cpp src/MultiImage.cpp src/Converter.cpp src/OraSaver.cpp src/FileUtils.cpp src/Format.cpp src/FileSizeEval.cpp src/ImageOptim.cpp src/main.cpp
+HEADERS += src/Compression.hpp src/CsvWriter.hpp src/Image.hpp src/Frame.hpp src/ImageSimilarities.hpp src/MultiImage.hpp src/Converter.hpp src/OraSaver.hpp src/FileUtils.hpp src/Format.hpp src/FileSizeEval.hpp src/ImageOptim.hpp src/formats/FormatWebP.hpp src/ProgressBar.hpp
+SOURCES += src/Compression.cpp src/CsvWriter.cpp src/Image.cpp src/Frame.cpp src/ImageSimilarities.cpp src/MultiImage.cpp src/Converter.cpp src/OraSaver.cpp src/FileUtils.cpp src/Format.cpp src/FileSizeEval.cpp src/ImageOptim.cpp src/formats/FormatWebP.cpp src/main.cpp
 
 # minizip
 SOURCES += src/minizip/ioapi.cpp src/minizip/zip.cpp

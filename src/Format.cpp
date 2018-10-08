@@ -17,9 +17,11 @@
 
 #include "Format.hpp"
 #include "FileSizeEval.hpp"
+#include "formats/FormatWebP.hpp"
 
 #include <QBuffer>
 #include <QByteArray>
+#include <QFile>
 
 static QByteArray to_raw_data( QImage img ){
 	img = img.convertToFormat( QImage::Format_ARGB32 );
@@ -57,7 +59,10 @@ QByteArray Format::to_byte_array( QImage img ) const{
 	QByteArray data;
 	QBuffer buffer( &data );
 	buffer.open( QIODevice::WriteOnly );
-	img.save( &buffer, ext(), get_quality() );
+	if( format.toLower() == "webp" )
+		FormatWebP::write( img, buffer, true, true );
+	else
+		img.save( &buffer, ext(), get_quality() );
 	return data;
 }
 
@@ -66,6 +71,13 @@ bool Format::save( QImage img, QString path ) const{
 		qWarning( "RAW mode should not be saved, only available as to_byte_array()" );
 		return false;
 	}
+	if( format.toLower() == "webp" ){
+		QFile file( filename(path) );
+		if( !file.open( QIODevice::WriteOnly ) )
+			return false;
+		return FormatWebP::write( img, file, true, true );
+	}
+	
 	return img.save( filename(path), ext(), get_quality() );
 }
 
