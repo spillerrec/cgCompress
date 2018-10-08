@@ -51,11 +51,9 @@ QImage FormatWebP::read( QByteArray data ){
 }
 
 bool FormatWebP::write( QImage image, QIODevice& device, bool keep_alpha, bool high_compression ){
-	//bool alpha = image.hasAlphaChannel();
-	//TODO: Delete contents of transparent pixels when !keep_alpha && alpha
 	unsigned stride = 4 * image.width();
 	
-	auto data = std::make_unique<uint8_t>( stride * image.height() );
+	auto data = std::make_unique<uint8_t[]>( stride * image.height() );
 	if( !data )
 		return false;
 	
@@ -68,26 +66,29 @@ bool FormatWebP::write( QImage image, QIODevice& device, bool keep_alpha, bool h
 		uint8_t* out = data.get() + iy*stride;
 		
 		for( int ix=0; ix<image.width(); ++ix, ++in ){
-			*(out++) = qRed(   *in );
-			*(out++) = qGreen( *in );
 			*(out++) = qBlue(  *in );
+			*(out++) = qGreen( *in );
+			*(out++) = qRed(   *in );
 			*(out++) = qAlpha( *in );
 		}
 	}
 	
 	WebPConfig config;
+	if( !WebPConfigInit( &config ) )
+		return false;
 	config.lossless = 1;
+	config.exact = keep_alpha ? 1 : 0;
 	config.quality = 100;
 	config.method = high_compression ? 6 : 0;
-	config.image_hint = WEBP_HINT_GRAPH; //TODO: compare
-	//config.image_hint = WEBP_HINT_PICTURE;
-	//config.image_hint = WEBP_HINT_DEFAULT;
 	if( !WebPValidateConfig( &config ) )
 		return false;
 	
 	WebPPicture pic;
 	if( !WebPPictureInit( &pic ) )
 		return false;
+	pic.width = image.width();
+	pic.height = image.height();
+	pic.argb_stride = stride;
 	pic.use_argb = true;
 	pic.argb = (uint32_t*)data.get();
 	pic.argb_stride = image.width();
@@ -98,8 +99,10 @@ bool FormatWebP::write( QImage image, QIODevice& device, bool keep_alpha, bool h
 	pic.writer = WebPMemoryWrite;
 	pic.custom_ptr = &writer;
 	
-	if( !WebPEncode(&config, &pic) )
+	if( !WebPEncode(&config, &pic) ){
+		qDebug( "Encode failed with %d", pic.error_code );
 		return false;
+	}
 	
 	device.write( (char*)writer.mem, writer.size );
 	free( writer.mem ); //TODO: Wrong if device throws?
