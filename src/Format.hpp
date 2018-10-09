@@ -81,7 +81,7 @@ class Format {
 		 */
 		bool save( QImage img, QString path ) const;
 		
-		QByteArray to_byte_array( QImage img ) const;
+		QByteArray to_byte_array( QImage img, bool keep_alpha = true ) const;
 		
 		/** The precision when calculating the file size */
 		enum Precision{

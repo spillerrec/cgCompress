@@ -75,8 +75,8 @@ class Image {
 		/** Save the image to a memory buffer
 		 *  \param [in] format The compression format to use
 		 *  \return The image in compressed form */
-		QByteArray to_byte_array( Format format ) const
-			{ return saved_data.size() > 0 ? saved_data : format.to_byte_array( remove_transparent() ); }
+		QByteArray to_byte_array( Format format, bool keep_alpha=true ) const
+			{ return saved_data.size() > 0 ? saved_data : format.to_byte_array( remove_transparent(), keep_alpha ); }
 		
 		Image resize( int size ) const;
 		

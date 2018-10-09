@@ -52,7 +52,7 @@ static QByteArray to_raw_data( QImage img ){
  *  \param [in] img Image to save
  *  \return buffer containing the compressed image
  */
-QByteArray Format::to_byte_array( QImage img ) const{
+QByteArray Format::to_byte_array( QImage img, bool keep_alpha ) const{
 	if( format.toLower() == "raw" )
 		return to_raw_data( img );
 	
@@ -61,7 +61,7 @@ QByteArray Format::to_byte_array( QImage img ) const{
 	buffer.open( QIODevice::WriteOnly );
 	if( format.toLower() == "webp" ){
 		if( get_quality() == 100 )
-			FormatWebP::write( img, buffer, true, 100 );
+			FormatWebP::write( img, buffer, keep_alpha, 100 );
 		else
 			FormatWebP::writeLossy( img, buffer, get_quality() );
 	}

@@ -131,7 +131,8 @@ void OraSaver::save( QString path, Format format ) const{
 	{	ProgressBar progress( "Saving", used.count() );
 		for( auto layer : used ){
 			QString name = QString( "data/%1.%2" ).arg( layer ).arg( format.ext() );
-			files.append( { name, primitives[layer].to_byte_array( format ) } );
+			auto keep_alpha = primitives[layer].mustKeepAlpha();
+			files.append( { name, primitives[layer].to_byte_array( format, keep_alpha ) } );
 			progress.update();
 		}
 	}
@@ -147,8 +148,8 @@ void OraSaver::save( QString path, Format format ) const{
 			//Detect composition mode
 			//TODO: Decide this earlier and change encoding type
 			QString composition = "composite-op=\"cgcompress:alpha-replace\"";
-		//	if( !primitives[layer].mustKeepAlpha() )
-		//		composition = "";
+			if( !primitives[layer].mustKeepAlpha() )
+				composition = "";
 			
 			QString name = QString( "data/%1.%2" ).arg( layer ).arg( format.ext() );
 			stack += QString( "<layer %1 name=\"%2\" src=\"%2\" x=\"%3\" y=\"%4\" />" )
