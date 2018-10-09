@@ -22,5 +22,8 @@ class QIODevice;
 
 namespace FormatWebP{
 	QImage read( QByteArray data );
-	bool write( QImage image, QIODevice& device, bool keep_alpha=true, bool high_compression=true );
+	bool write( QImage image, QIODevice& device, bool keep_alpha=true, int quality=100 );
+	bool writeLossy( QImage, QIODevice& device, int quality );
+	int estimate_filesize( QImage image, bool keep_alpha );
 }
+

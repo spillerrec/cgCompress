@@ -50,12 +50,30 @@ QImage FormatWebP::read( QByteArray data ){
 	return img;
 }
 
-bool FormatWebP::write( QImage image, QIODevice& device, bool keep_alpha, bool high_compression ){
+
+class Compressor{
+	private:
+		WebPConfig config;
+		WebPPicture pic;
+		WebPMemoryWriter writer;
+		std::unique_ptr<uint8_t[]> data;
+		bool validate(){ return WebPValidateConfig( &config ); }
+		
+	public:
+		Compressor(){ writer.mem = nullptr; }
+		~Compressor(){ free( writer.mem ); }
+		
+		bool init( QImage );
+		
+		void setupLossless( bool keep_alpha, int quality=100 );
+		void setupLossy( int quality );
+		
+		bool write( QIODevice& );
+		int fileSize();
+};
+bool Compressor::init( QImage image ){
 	unsigned stride = 4 * image.width();
-	
-	auto data = std::make_unique<uint8_t[]>( stride * image.height() );
-	if( !data )
-		return false;
+	data = std::make_unique<uint8_t[]>( stride * image.height() );
 	
 	//Make sure the input is in ARGB
 	if( image.format() != QImage::Format_RGB32 && image.format() != QImage::Format_ARGB32 )
@@ -73,39 +91,91 @@ bool FormatWebP::write( QImage image, QIODevice& device, bool keep_alpha, bool h
 		}
 	}
 	
-	WebPConfig config;
-	if( !WebPConfigInit( &config ) )
-		return false;
-	config.lossless = 1;
-	config.exact = keep_alpha ? 1 : 0;
-	config.quality = 100;
-	config.method = high_compression ? 6 : 0;
-	if( !WebPValidateConfig( &config ) )
+	//Initialize structures
+	if( !WebPPictureInit( &pic ) || !WebPConfigInit( &config ) )
 		return false;
 	
-	WebPPicture pic;
-	if( !WebPPictureInit( &pic ) )
-		return false;
-	pic.width = image.width();
+	pic.width  = image.width();
 	pic.height = image.height();
 	pic.argb_stride = stride;
 	pic.use_argb = true;
 	pic.argb = (uint32_t*)data.get();
 	pic.argb_stride = image.width();
 	
-	// Set up a byte-writing method (write-to-memory, in this case):
-	WebPMemoryWriter writer;
+	return true;
+}
+
+void Compressor::setupLossless( bool keep_alpha, int quality ){
+	config.lossless = 1;
+	config.exact = keep_alpha ? 1 : 0;
+	config.quality = quality;
+	config.method = 6*quality / 100;
+}
+void Compressor::setupLossy( int quality ){
+	//TODO:
+}
+bool Compressor::write( QIODevice& device ){
+	if( !validate() )
+		return false;
+	
 	WebPMemoryWriterInit(&writer);
 	pic.writer = WebPMemoryWrite;
 	pic.custom_ptr = &writer;
 	
 	if( !WebPEncode(&config, &pic) ){
-		qDebug( "Encode failed with %d", pic.error_code );
+		qDebug( "WebP encode failed with %d", pic.error_code );
 		return false;
 	}
 	
-	device.write( (char*)writer.mem, writer.size );
-	free( writer.mem ); //TODO: Wrong if device throws?
-	
+	device.write( (char*)writer.mem, writer.size ); //TODO: Check?
 	return true;
+}
+
+int Compressor::fileSize(){
+	if( !validate() )
+		return -1;
+	
+	//TODO: Do something smarter than creating an array
+	WebPMemoryWriterInit(&writer);
+	pic.writer = WebPMemoryWrite;
+	pic.custom_ptr = &writer;
+	
+	if( !WebPEncode(&config, &pic) ){
+		qDebug( "WebP encode failed with %d", pic.error_code );
+		return -1;
+	}
+	
+	return writer.size;
+}
+
+bool FormatWebP::write( QImage image, QIODevice& device, bool keep_alpha, int quality ){
+	Compressor webp;
+	if( !webp.init( image ) )
+		return false;
+	
+	webp.setupLossless( keep_alpha, quality );
+	
+	return webp.write( device );
+}
+
+bool FormatWebP::writeLossy( QImage image, QIODevice& device, int quality ){
+	return image.save( &device, "webp", quality ); //TODO: Quickfix
+	Compressor webp;
+	if( !webp.init( image ) )
+		return false;
+	
+	webp.setupLossy( quality );
+	
+	return webp.write( device );
+}
+
+
+int FormatWebP::estimate_filesize( QImage image, bool keep_alpha ){
+	Compressor webp;
+	if( !webp.init( image ) )
+		return false;
+	
+	webp.setupLossless( keep_alpha, 0 );
+	
+	return webp.fileSize();
 }
