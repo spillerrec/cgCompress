@@ -59,7 +59,7 @@ QByteArray Format::to_byte_array( QImage img ) const{
 	QByteArray data;
 	QBuffer buffer( &data );
 	buffer.open( QIODevice::WriteOnly );
-	if( format.toLower() == "webp" )
+	if( format.toLower() == "webp" && get_quality() == 100 )
 		FormatWebP::write( img, buffer, true, true );
 	else
 		img.save( &buffer, ext(), get_quality() );
