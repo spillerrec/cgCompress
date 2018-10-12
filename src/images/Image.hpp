@@ -15,18 +15,34 @@
 	along with cgCompress.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-class QImage;
-class QByteArray;
-class QIODevice;
+#ifndef IMAGE2_HPP
+#define IMAGE2_HPP
 
-#include "../images/Rgba.hpp" //TODO: Avoid
+#include "ImageView.hpp"
+#include <memory>
 
+template<typename T>
+class Image2{
+	private:
+		std::unique_ptr<T[]> data;
+		int width { 0 };
+		int height{ 0 };
+		
+	public:
+		Image2() : data(nullptr), width(0), height(0) {}
+		Image2( int width, int height )
+			: data(std::make_unique<T[]>(width*height))
+			, width(width), height(height) {}
+			
+		Image2( T* data, int width, int height )
+			: data(data), width(width), height(height) {}
+		
+		
+		operator ConstImageView<T>() const
+			{ return {data.get(), width, height, width}; }
+		operator      ImageView<T>() const
+			{ return {data.get(), width, height, width}; }
+};
 
-namespace FormatWebP{
-	QImage read( QByteArray data );
-	RgbaImage readRgbaImage( QByteArray data );
-	bool write( QImage image, QIODevice& device, bool keep_alpha=true, int quality=100 );
-	bool writeLossy( QImage, QIODevice& device, int quality );
-	int estimate_filesize( QImage image, bool keep_alpha );
-}
+#endif
 

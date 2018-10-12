@@ -28,6 +28,7 @@
 #include "Compression.hpp"
 #include "CsvWriter.hpp"
 #include "OraSaver.hpp"
+#include "decoder/OraHandler.hpp"
 
 /** Extracts the images in a cgCompress file.
  *  
@@ -39,21 +40,19 @@
  */
 QList<std::pair<QString,QImage>> extract_files( QString filename ){
 	QList<std::pair<QString,QImage>> files;
-	QImageReader reader( filename, "cgcompress" );
-	
-	if( !reader.canRead() ){
-		if( !QImageReader::supportedImageFormats().contains( "cgcompress" ) )
-			qWarning( "Extracting requires the cgCompress plug-in to be installed!" );
-		else
-			qWarning( "Could not read cgCompress file" );
+	QFile f( filename );
+	if( !f.open( QIODevice::ReadOnly ) )
 		return files;
-	}
 	
-	QImage img;
+	OraHandler handler;
+	if( !handler.load( f ) )
+		return files;
 	
-	int i=0;
-	while( reader.read( &img ) ){
-		auto index = QString( "%1" ).arg( i++, 4, 10, QChar{'0'} );
+	int image_count = handler.imageCount();
+	for( int i=0; i<image_count; i++ ){
+		auto img = handler.read();
+		//TODO: Check img
+		auto index = QString( "%1" ).arg( i, 4, 10, QChar{'0'} );
 		files.append( { index, img } );
 	}
 	

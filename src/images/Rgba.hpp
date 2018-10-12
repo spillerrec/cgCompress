@@ -15,18 +15,30 @@
 	along with cgCompress.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-class QImage;
-class QByteArray;
-class QIODevice;
+#ifndef IMAGE_RGBA_HPP
+#define IMAGE_RGBA_HPP
 
-#include "../images/Rgba.hpp" //TODO: Avoid
+#include "Image.hpp"
 
+struct Rgba{
+	uint8_t b{ 0 };
+	uint8_t g{ 0 };
+	uint8_t r{ 0 };
+	uint8_t a{ 0 };
+	
+	Rgba() {};
+	Rgba( uint8_t r, uint8_t g, uint8_t b, uint8_t a )
+		: b(b), g(g), r(r), a(a) { }
+		
+	bool operator!=( Rgba other )
+		{ return r!=other.r || g!=other.g || b!=other.b || a!=other.a; }
+};
 
-namespace FormatWebP{
-	QImage read( QByteArray data );
-	RgbaImage readRgbaImage( QByteArray data );
-	bool write( QImage image, QIODevice& device, bool keep_alpha=true, int quality=100 );
-	bool writeLossy( QImage, QIODevice& device, int quality );
-	int estimate_filesize( QImage image, bool keep_alpha );
+inline uint8_t mul8U( uint8_t left, uint8_t right ){
+	return (int(left) * int(right)) >> 8;
 }
+
+using RgbaImage = Image2<Rgba>;
+
+#endif
 

@@ -26,6 +26,7 @@
 
 
 #include "FormatWebP.hpp"
+#include "../images/Rgba.hpp"
 #include "webp/decode.h"
 #include "webp/encode.h"
 
@@ -48,6 +49,17 @@ QImage FormatWebP::read( QByteArray data ){
 	
 	free( raw );
 	return img;
+}
+
+
+RgbaImage FormatWebP::readRgbaImage( QByteArray data ){
+	int width, height;
+	
+	uint8_t *raw = WebPDecodeRGBA( (uint8_t*)data.data(), data.size(), &width, &height );
+	if( !raw )
+		return { 0,0 };
+	
+	return RgbaImage( reinterpret_cast<Rgba*>( raw ), width, height );
 }
 
 
