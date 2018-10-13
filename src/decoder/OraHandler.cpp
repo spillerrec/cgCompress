@@ -16,6 +16,8 @@
 */
 
 #include "OraHandler.hpp"
+#include "../formats/FormatWebP.hpp"
+#include "../images/Blend.hpp"
 
 #include <cstring>
 #include <iterator>
@@ -49,11 +51,8 @@ static QByteArray read_data( archive* a ){
 	}
 }
 
-static QImage read_image( archive* a, const char* format=nullptr ){
-	QByteArray raw = read_data( a );
-	QBuffer buf( &raw );
-	QImageReader reader( (QIODevice*)&buf, format );
-	return reader.canRead() ? reader.read() : QImage();
+static RgbaImage read_image( archive* a, const char* format=nullptr ){
+	return FormatWebP::readRgbaImage( read_data( a ) );
 }
 
 static QString next_file( archive* a ){
@@ -94,9 +93,9 @@ bool OraHandler::read_and_validate( archive *a ){
 	while( !(name = next_file( a )).isNull() ){
 		if( name.startsWith( "data/" ) ){
 			QString suffix = QFileInfo(name).suffix();
-			QImage img = read_image( a, suffix.toLocal8Bit().constData() );
-			if( !img.isNull() )
-				images.insert( std::pair<QString,QImage>( name, img ) );
+			auto img = read_image( a, suffix.toLocal8Bit().constData() );
+			if( img.width() != 0 )
+				images.insert( {name, std::move(img) } );
 			else
 				qWarning( "Could not read data file: %s", name.toLocal8Bit().constData() );
 		}
@@ -152,63 +151,23 @@ bool OraHandler::load(QIODevice& device){
 	return success;
 }
 
-static void alpha_replace( QImage &output, QImage image, int dx, int dy ){
-	//TODO: check range
-	image = image.convertToFormat( QImage::Format_ARGB32 );
-	for( int iy=0; iy<image.height(); iy++ ){
-		auto out = (QRgb*)output.scanLine( iy+dy );
-		auto in  = (const QRgb*)image.constScanLine( iy );
-		for( int ix=0; ix<image.width(); ix++ )
-			if( in[ix] != qRgba( 255, 0, 255, 0 ) )
-				out[ix+dx] = in[ix];
-	}
+static void alpha_replace( RgbaView output, ConstRgbaView image, int dx, int dy ){
+	Blending::BlendImages<Rgba>( output.crop( dx, dy, image.width(), image.height() ), image, Blending::alphaReplace );
 }
 
-
-bool ora_composite_mode( std::string text, QPainter::CompositionMode &mode ){
-	static std::map<std::string,QPainter::CompositionMode> translator{
-			{ "", QPainter::CompositionMode_SourceOver }
-		,	{ "svg:src-over", QPainter::CompositionMode_SourceOver }
-		,	{ "svg:plus", QPainter::CompositionMode_Plus }
-		,	{ "svg:multiply", QPainter::CompositionMode_Multiply }
-		,	{ "svg:screen", QPainter::CompositionMode_Screen }
-		,	{ "svg:overlay", QPainter::CompositionMode_Overlay }
-		,	{ "svg:darken", QPainter::CompositionMode_Darken }
-		,	{ "svg:lighten", QPainter::CompositionMode_Lighten }
-		,	{ "svg:color-dodge", QPainter::CompositionMode_ColorDodge }
-		,	{ "svg:color-burn", QPainter::CompositionMode_ColorBurn }
-		,	{ "svg:hard-light", QPainter::CompositionMode_HardLight }
-		,	{ "svg:soft-light", QPainter::CompositionMode_SoftLight }
-		,	{ "svg:difference", QPainter::CompositionMode_Difference }
-		
-		/* Doesn't appear to be supported by QPainter
-		,	{ "svg:color", QPainter::CompositionMode_SourceOver }
-		,	{ "svg:luminosity", QPainter::CompositionMode_SourceOver }
-		,	{ "svg:hue", QPainter::CompositionMode_SourceOver }
-		,	{ "svg:saturation", QPainter::CompositionMode_SourceOver }
-		*/
-		};
-	
-	auto it = translator.find( text );
-	if( it != translator.end() ){
-		mode = (*it).second;
-		return true;
-	}
-	return false;
+static void src_over( RgbaView output, ConstRgbaView image, int dx, int dy ){
+	Blending::BlendImages<Rgba>( output.crop( dx, dy, image.width(), image.height() ), image, Blending::srcOverRgba );
 }
 
-void OraHandler::render_stack( xml_node node, QImage &output, int offset_x, int offset_y ) const{
-	QPainter painter( &output );
+void OraHandler::render_stack( xml_node node, RgbaImage &output, int offset_x, int offset_y ) const{
 	for( xml_node_iterator it = --node.end(); it != --node.begin(); it-- ){
 		std::string name( (*it).name() );
+		qWarning( "Element: %s", name.c_str() );
 		if( name == "stack" ){
 			int x = (*it).attribute( "x" ).as_int( 0 );
 			int y = (*it).attribute( "y" ).as_int( 0 );
 			
 			render_stack( *it, output, offset_x+x, offset_y+y );
-		}
-		else if( name == "text" ){
-			qWarning( "No support for text" );
 		}
 		else if( name == "layer" ){
 			QString source( QString::fromUtf8( (*it).attribute( "src" ).value() ) );
@@ -217,37 +176,23 @@ void OraHandler::render_stack( xml_node node, QImage &output, int offset_x, int 
 			
 			std::string visibility = (*it).attribute( "visibility" ).value();
 			if( visibility == "" || visibility == "visible" ){
-				QImage image;
-				std::map<QString,QImage>::const_iterator img_it = images.find( source );
-				if( img_it != images.end() )
-					image = img_it->second;
-				else{
+				auto img_it = images.find( source );
+				if( img_it == images.end() ){
 					qWarning( "Layer source not found: %s", source.toLocal8Bit().constData() );
 					return;
 				}
+				auto& image = img_it->second;
 					
 				//composite-op
 				std::string composite = (*it).attribute( "composite-op" ).value();
-				QPainter::CompositionMode mode = QPainter::CompositionMode_SourceOver;
-				if( !ora_composite_mode( composite, mode ) ){
-					if( composite == "cgcompress:alpha-replace" )
-						alpha_replace( output, image, x, y );
-					else{
-						qWarning( "Unsupported composite-op: %s", composite.c_str() );
-						return;
-					}
+				if( composite == "cgcompress:alpha-replace" )
+					alpha_replace( output, image, x, y );
+				else if( composite == "svg:src-over" ){
+					src_over( output, image, x, y );
 				}
 				else{
-					painter.setCompositionMode( mode );
-					
-					double opacity = (*it).attribute( "opacity" ).as_double( 1.0 );
-					painter.setOpacity( opacity );
-					
-					painter.drawImage( x, y, image );
-					
-					//Restore modified settings
-					painter.setOpacity( 1.0 );
-					painter.setCompositionMode( QPainter::CompositionMode_SourceOver );
+					qWarning( "Unsupported composite-op: %s", composite.c_str() );
+					return;
 				}
 			}
 		}
@@ -277,10 +222,19 @@ QImage OraHandler::read(){
 	if( !stack )
 		return {};
 	
-	QImage output( width, height, QImage::Format_ARGB32 );
-	output.fill( qRgba( 0,0,0,0 ) );
+	RgbaImage output( width, height );
 	render_stack( stack, output );
-	return output;
+	
+	QImage qimg( width, height, QImage::Format_ARGB32 );
+	qimg.fill( qRgba( 0,0,0,0 ) );
+	for( int iy=0; iy<height; iy++ ){
+		auto line_in  = output[iy];
+		auto line_out = (QRgb*)qimg.scanLine( iy );
+		for( int ix=0; ix<width; ix++ ){
+			line_out[ix] = qRgba( line_in[ix].r, line_in[ix].g, line_in[ix].b, line_in[ix].a );
+		}
+	}
+	return qimg;
 }
 
 int OraHandler::imageCount() const{

@@ -27,7 +27,7 @@ CONFIG += c++14
 CONFIG += debug_and_release
 
 #QMAKE_CXXFLAGS_RELEASE -= -O2
-QMAKE_CXXFLAGS_DEBUG += -O3
+#QMAKE_CXXFLAGS_DEBUG += -O3
 
 # Position of binaries and build files
 Release:DESTDIR = release

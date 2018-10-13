@@ -23,7 +23,7 @@
 namespace Blending{
 	
 
-inline uint8_t srcOverRgba( Rgba bottom, Rgba top ){
+inline Rgba srcOverRgba( Rgba bottom, Rgba top ){
 	uint8_t srcA = top.a;
 	uint8_t dstA = mul8U( bottom.a, 255-srcA );
 	uint8_t outA = srcA + dstA;
@@ -34,29 +34,29 @@ inline uint8_t srcOverRgba( Rgba bottom, Rgba top ){
 	
 	Rgba out;
 	out.a = outA;
-	out.r = over( bottom.r, bottom.a, top.r, top.a );
-	out.g = over( bottom.g, bottom.a, top.g, top.a );
-	out.b = over( bottom.b, bottom.a, top.b, top.a );
+	out.r = over( bottom.r, top.r );
+	out.g = over( bottom.g, top.g );
+	out.b = over( bottom.b, top.b );
 	return out;
 }
 
 //Pick the top one if any alpha
-inline uint8_t srcOverDirty( Rgba bottom, Rgba top ){
+inline Rgba srcOverDirty( Rgba bottom, Rgba top ){
 	return ( top.a != 0 ) ? top : bottom;
 }
 
 //Pick the top one if any alpha
-inline uint8_t srcOverDirty( Rgba bottom, Rgba top ){
+inline Rgba alphaReplace( Rgba bottom, Rgba top ){
 	return ( top != Rgba(255,0,255,0) ) ? top : bottom;
 }
 
-template<typename T, typename Func>
-void BlendImages( ImageView<T> bottom, ConstImageView<T> overlay, Func blend ){
+template<typename T>
+void BlendImages( ImageView<T> bottom, ConstImageView<T> overlay, T (*blend)(T,T) ){
 	//TODO: assert same size
-	for( int iy=0; iy<overlay.width(); iy++ ){
+	for( int iy=0; iy<overlay.height(); iy++ ){
 		auto row_bottom  = bottom [iy];
 		auto row_overlay = overlay[iy];
-		for( int ix=0; ix<overlay.height(); ix++ )
+		for( int ix=0; ix<overlay.width(); ix++ )
 			row_bottom[ix] = blend( row_bottom[ix], row_overlay[ix] );
 	}
 }

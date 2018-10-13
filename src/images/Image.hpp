@@ -22,26 +22,17 @@
 #include <memory>
 
 template<typename T>
-class Image2{
+class Image2 : public ImageView<T>{
 	private:
 		std::unique_ptr<T[]> data;
-		int width { 0 };
-		int height{ 0 };
 		
 	public:
-		Image2() : data(nullptr), width(0), height(0) {}
-		Image2( int width, int height )
-			: data(std::make_unique<T[]>(width*height))
-			, width(width), height(height) {}
+		Image2( T* data_ptr, int width, int height )
+			: ImageView<T>(data_ptr, width, height), data(data_ptr) {}
 			
-		Image2( T* data, int width, int height )
-			: data(data), width(width), height(height) {}
-		
-		
-		operator ConstImageView<T>() const
-			{ return {data.get(), width, height, width}; }
-		operator      ImageView<T>() const
-			{ return {data.get(), width, height, width}; }
+		Image2() : Image2(nullptr, 0, 0) {}
+		Image2( int width, int height )
+			: Image2( new T[width*height], width, height ) {}
 };
 
 #endif

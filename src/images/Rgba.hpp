@@ -39,6 +39,8 @@ inline uint8_t mul8U( uint8_t left, uint8_t right ){
 }
 
 using RgbaImage = Image2<Rgba>;
+using RgbaView = ImageView<Rgba>;
+using ConstRgbaView = ConstImageView<Rgba>;
 
 #endif
 

@@ -28,18 +28,20 @@
 
 #include <pugixml.hpp>
 
+#include "../images/Rgba.hpp"
+
 class OraHandler{
 	private:
 		int frame{ -1 };
 		bool loaded{ false };
 		
-		std::map<QString,QImage> images;
+		std::map<QString,RgbaImage> images;
 		
 		pugi::xml_document doc;
 		
 		bool read_and_validate( archive *a );
 		
-		void render_stack( pugi::xml_node node, QImage &output, int offset_x=0, int offset_y=0 ) const;
+		void render_stack( pugi::xml_node node, RgbaImage &output, int offset_x=0, int offset_y=0 ) const;
 	
 	public:
 		bool load(QIODevice& device);

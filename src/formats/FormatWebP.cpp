@@ -55,7 +55,7 @@ QImage FormatWebP::read( QByteArray data ){
 RgbaImage FormatWebP::readRgbaImage( QByteArray data ){
 	int width, height;
 	
-	uint8_t *raw = WebPDecodeRGBA( (uint8_t*)data.data(), data.size(), &width, &height );
+	uint8_t *raw = WebPDecodeBGRA( (uint8_t*)data.data(), data.size(), &width, &height );
 	if( !raw )
 		return { 0,0 };
 	

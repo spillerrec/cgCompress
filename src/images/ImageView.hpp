@@ -47,57 +47,54 @@ class RowIt{
 };
 
 template<typename T>
-class ConstImageView{
-	private:
-		const T* data;
-		int width, height;
-		int stride;
-		
-		const T* fromOffset( int x, int y ) const
-			{ return data + y*stride + x; }
-		
-	public:
-		ConstImageView( const T* data, int width, int height, int stride )
-			:	data(data), width(width), height(height), stride(stride) { }
-			
-		ConstImageView( const T* data, int width, int height )
-			:	ConstImageView( data, width, height, width ) { }
-		
-		auto operator[]( int y ) const
-			{ return RowIt<T>( fromOffset(0,y), width ); }
-			
-		auto begin() const{ return RowIt<const T>( (*this)[  0   ], stride ); }
-		auto end()   const{ return RowIt<const T>( (*this)[height], stride ); }
-		
-		ConstImageView crop( int x, int y, int newWidth, int newHeight) const
-			{ return { fromOffset( x, y ), newWidth, newHeight, stride }; }
-};
-
-template<typename T>
-class ImageView{
-	private:
+class ImageViewBase{
+	protected:
 		T* data;
-		int width, height;
+		int w, h;
 		int stride;
 		
 		T* fromOffset( int x, int y ) const
 			{ return data + y*stride + x; }
 		
 	public:
+		ImageViewBase( T* data, int width, int height, int stride )
+			:	data(data), w(width), h(height), stride(stride) { }
+			
+		ImageViewBase( T* data, int width, int height )
+			:	ImageViewBase<T>( data, width, height, width ) { }
+		
+		auto width()  const{ return w; }
+		auto height() const{ return h; }
+		
+		auto operator[]( int y ) const
+			{ return RowIt<T>( fromOffset(0,y), width(), stride ); }
+			
+		auto begin() const{ return (*this)[0]; }
+		auto end()   const{ return (*this)[h]; }
+};
+
+template<typename T>
+class ConstImageView : public ImageViewBase<const T>{
+	public:
+		ConstImageView( const T* data, int width, int height, int stride )
+			:	ImageViewBase<const T>( data, width, height, stride) { }
+			
+		ConstImageView( const T* data, int width, int height )
+			:	ConstImageView( data, width, height, width ) { }
+			
+		
+		ConstImageView<T> crop( int x, int y, int newWidth, int newHeight) const
+			{ return { this->fromOffset( x, y ), newWidth, newHeight, this->stride }; }
+};
+
+template<typename T>
+class ImageView : public ImageViewBase<T>{
+	public:
 		ImageView( T* data, int width, int height, int stride )
-			:	data(data), width(width), height(height), stride(stride) { }
+			:	ImageViewBase<T>( data, width, height, stride) { }
 			
 		ImageView( T* data, int width, int height )
 			:	ImageView( data, width, height, width ) { }
-		
-		auto operator[]( int y ) const
-			{ return RowIt<T>( fromOffset(0,y), width ); }
-			
-		auto begin() const{ return RowIt<T>( (*this)[  0   ], stride ); }
-		auto end()   const{ return RowIt<T>( (*this)[height], stride ); }
-		
-		ImageView crop( int x, int y, int newWidth, int newHeight) const
-			{ return { fromOffset( x, y ), newWidth, newHeight, stride }; }
 		
 		void fill( T value ){
 			for( auto row : *this )
@@ -106,7 +103,10 @@ class ImageView{
 		}
 		
 		operator ConstImageView<T>() const
-			{ return { data, width, height, stride }; }
+			{ return { this->data, this->w, this->h, this->stride }; }
+		
+		ImageView<T> crop( int x, int y, int newWidth, int newHeight) const
+			{ return { this->fromOffset( x, y ), newWidth, newHeight, this->stride }; }
 };
 
 
