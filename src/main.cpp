@@ -167,7 +167,7 @@ int main( int argc, char* argv[] ){
 	}
 	else if( options.contains( "--recompress" ) ){
 		if( name_extension.isNull() )
-			name_extension = ".recompresseed";
+			name_extension = ".recompressed";
 		files = expandFolders( files );
 		for( auto file : files ){
 			auto images = extract_files( file );
