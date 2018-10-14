@@ -98,7 +98,7 @@ static int parse_int( QString input, int default_value=0 ){
 
 static int optimizeImage( MultiImage& img, QString output_path ){
 	img.optimize( output_path );
-	if( !img.validate( output_path ) ){
+	if( !img.validate( output_path + ".cgcompress" ) ){
 		//Issue with file, don't convert
 		cout << "Resulting file did not pass validity check!\n";
 		QFile::remove( output_path );

@@ -19,6 +19,8 @@
 #include "OraSaver.hpp"
 #include "Converter.hpp"
 #include "ProgressBar.hpp"
+#include "decoder/OraHandler.hpp"
+#include "images/Rgba.hpp"
 
 #include "ImageSimilarities.hpp"
 
@@ -31,6 +33,7 @@
 #include <QtConcurrent>
 #include <QDebug>
 #include <QElapsedTimer>
+#include <QFile>
 
 
 /** Find a converter to a frame not found
@@ -383,14 +386,27 @@ bool MultiImage::optimize3( QString name ) const{
  *  \param [in] file File path for file to validate
  */
 bool MultiImage::validate( QString file ) const{
-	QImageReader reader( file );
+	QFile f( file );
+	if( !f.open(QIODevice::ReadOnly) ){
+		qDebug( "File '%s' would not open for reading", file.toLocal8Bit().constData() );
+		return false;
+	}
 	
-	QImage current;
-	for( int i=0; i<originals.count(); i++ ){
-		if( !reader.read( &current ) )
-			return false;
+	OraHandler reader;
+	if( !reader.load( f ) ){
+		qDebug( "Image would not load for validation" );
+		return false;
+	}
+	
+	if( reader.imageCount() != originals.size() ){
+		qDebug( "Not the same amount of images in resulting file" );
+		return false;
+	}
+	
+	for( int i=0; i<reader.imageCount(); i++ ){
+		auto img = reader.read();
 		
-		auto img1 = current            .convertToFormat( QImage::Format_ARGB32 );
+		auto img1 = toQImage(img)      .convertToFormat( QImage::Format_ARGB32 );
 		auto img2 = originals[i].qimg().convertToFormat( QImage::Format_ARGB32 );
 		
 		if( img1 != img2 ){
@@ -401,7 +417,6 @@ bool MultiImage::validate( QString file ) const{
 		}
 	}
 	
-	//Fail if there are more images available
-	return !reader.read( &current );
+	return true;
 }
 

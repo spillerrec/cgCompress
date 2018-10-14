@@ -162,7 +162,6 @@ static void src_over( RgbaView output, ConstRgbaView image, int dx, int dy ){
 void OraHandler::render_stack( xml_node node, RgbaImage &output, int offset_x, int offset_y ) const{
 	for( xml_node_iterator it = --node.end(); it != --node.begin(); it-- ){
 		std::string name( (*it).name() );
-		qWarning( "Element: %s", name.c_str() );
 		if( name == "stack" ){
 			int x = (*it).attribute( "x" ).as_int( 0 );
 			int y = (*it).attribute( "y" ).as_int( 0 );
@@ -187,7 +186,7 @@ void OraHandler::render_stack( xml_node node, RgbaImage &output, int offset_x, i
 				std::string composite = (*it).attribute( "composite-op" ).value();
 				if( composite == "cgcompress:alpha-replace" )
 					alpha_replace( output, image, x, y );
-				else if( composite == "svg:src-over" ){
+				else if( composite == "svg:src-over" || composite == "" ){
 					src_over( output, image, x, y );
 				}
 				else{
