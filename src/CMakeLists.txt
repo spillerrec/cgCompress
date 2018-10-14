@@ -14,6 +14,7 @@ set(SOURCES_OTHERS
 	)
 
 set(SOURCES_MAIN
+	images/Rgba.cpp
 	Compression.cpp
 	Converter.cpp
 	CsvWriter.cpp

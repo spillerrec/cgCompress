@@ -202,7 +202,7 @@ void OraHandler::render_stack( xml_node node, RgbaImage &output, int offset_x, i
 	}
 }
 
-QImage OraHandler::read(){
+RgbaImage OraHandler::read(){
 	frame++;
 	
 	if( !loaded )
@@ -224,17 +224,7 @@ QImage OraHandler::read(){
 	
 	RgbaImage output( width, height );
 	render_stack( stack, output );
-	
-	QImage qimg( width, height, QImage::Format_ARGB32 );
-	qimg.fill( qRgba( 0,0,0,0 ) );
-	for( int iy=0; iy<height; iy++ ){
-		auto line_in  = output[iy];
-		auto line_out = (QRgb*)qimg.scanLine( iy );
-		for( int ix=0; ix<width; ix++ ){
-			line_out[ix] = qRgba( line_in[ix].r, line_in[ix].g, line_in[ix].b, line_in[ix].a );
-		}
-	}
-	return qimg;
+	return output;
 }
 
 int OraHandler::imageCount() const{

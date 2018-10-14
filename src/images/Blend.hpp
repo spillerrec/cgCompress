@@ -19,6 +19,7 @@
 #define IMAGE_BLEND_HPP
 
 #include "Image.hpp"
+#include "Rgba.hpp"
 
 namespace Blending{
 	

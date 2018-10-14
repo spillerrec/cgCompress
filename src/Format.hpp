@@ -21,6 +21,7 @@
 #include <QImage>
 #include <QString>
 #include <QByteArray>
+#include "images/Rgba.hpp"
 
 /** Handles format and quality settings for image formats. */
 class Format {
@@ -79,9 +80,11 @@ class Format {
 		 *  \param [in] path File system path, without extension
 		 *  \return true on success
 		 */
-		bool save( QImage img, QString path ) const;
+		 bool save( QImage img, QString path ) const;
+		 bool save( ConstRgbaView img, QString path ) const;
 		
 		QByteArray to_byte_array( QImage img, bool keep_alpha = true ) const;
+		QByteArray to_byte_array( ConstRgbaView img, bool keep_alpha = true ) const;
 		
 		/** The precision when calculating the file size */
 		enum Precision{

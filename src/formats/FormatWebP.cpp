@@ -76,6 +76,7 @@ class Compressor{
 		~Compressor(){ free( writer.mem ); }
 		
 		bool init( QImage );
+		bool init( ConstRgbaView );
 		
 		void setupLossless( bool keep_alpha, int quality=100 );
 		void setupLossy( int quality );
@@ -112,6 +113,20 @@ bool Compressor::init( QImage image ){
 	pic.argb_stride = stride;
 	pic.use_argb = true;
 	pic.argb = (uint32_t*)data.get();
+	pic.argb_stride = image.width();
+	
+	return true;
+}
+bool Compressor::init( ConstRgbaView image ){
+	//Initialize structures
+	if( !WebPPictureInit( &pic ) || !WebPConfigInit( &config ) )
+		return false;
+	
+	pic.width  = image.width();
+	pic.height = image.height();
+	pic.argb_stride = image.stride() * 4;
+	pic.use_argb = true;
+	pic.argb = const_cast<uint32_t*>(reinterpret_cast<const uint32_t*>(image.rawData()));
 	pic.argb_stride = image.width();
 	
 	return true;
@@ -161,6 +176,16 @@ int Compressor::fileSize(){
 }
 
 bool FormatWebP::write( QImage image, QIODevice& device, bool keep_alpha, int quality ){
+	Compressor webp;
+	if( !webp.init( image ) )
+		return false;
+	
+	webp.setupLossless( keep_alpha, quality );
+	
+	return webp.write( device );
+}
+
+bool FormatWebP::write( ConstRgbaView image, QIODevice& device, bool keep_alpha, int quality ){
 	Compressor webp;
 	if( !webp.init( image ) )
 		return false;

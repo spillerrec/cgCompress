@@ -42,5 +42,11 @@ using RgbaImage = Image2<Rgba>;
 using RgbaView = ImageView<Rgba>;
 using ConstRgbaView = ConstImageView<Rgba>;
 
+class QImage toQImage( ConstRgbaView image );
+RgbaImage fromQImage( class QImage in );
+
+void removeAlpha( RgbaView image );
+void removeTransparent( RgbaView image, Rgba clear_color = {0,0,0,0} );
+
 #endif
 

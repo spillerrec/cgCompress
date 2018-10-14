@@ -70,6 +70,18 @@ QByteArray Format::to_byte_array( QImage img, bool keep_alpha ) const{
 	return data;
 }
 
+QByteArray Format::to_byte_array( ConstRgbaView img, bool keep_alpha ) const{
+	QByteArray data;
+	QBuffer buffer( &data );
+	if( format.toLower() == "webp" )
+		if( get_quality() == 100 ){
+			FormatWebP::write( img, buffer, keep_alpha, 100 );
+			return data;
+		}
+	
+	return to_byte_array(toQImage(img));
+}
+
 bool Format::save( QImage img, QString path ) const{
 	if( format.toLower() == "raw" ){
 		qWarning( "RAW mode should not be saved, only available as to_byte_array()" );
@@ -83,6 +95,16 @@ bool Format::save( QImage img, QString path ) const{
 	}
 	
 	return img.save( filename(path), ext(), get_quality() );
+}
+bool Format::save( ConstRgbaView img, QString path ) const{
+	if( format.toLower() == "webp" ){
+		QFile file( filename(path) );
+		if( !file.open( QIODevice::WriteOnly ) )
+			return false;
+		return FormatWebP::write( img, file, true, true );
+	}
+	
+	return save( toQImage( img ), path );
 }
 
 /** Estimate file size when compressed

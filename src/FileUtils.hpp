@@ -21,10 +21,12 @@
 #include <QString>
 #include <QDir>
 #include <QImage>
+#include <vector>
 
 #include "Format.hpp"
+#include "images/Rgba.hpp"
 
-QList<std::pair<QString,QImage>> extract_files( QString filename );
+std::vector<std::pair<QString,RgbaImage>> extract_files( QString filename );
 
 void extract_cgcompress( QString filename, Format format );
 
@@ -35,9 +37,6 @@ void pack_directory( QDir dir, QString name_extension );
 bool isSimilar( QImage img1, QImage img2 );
 
 QStringList expandFolders( QStringList files );
-
-QImage discardTransparent( QImage img, QRgb discard_color = qRgb(0,0,0) );
-QImage withoutAlpha( QImage img );
 
 #endif
 

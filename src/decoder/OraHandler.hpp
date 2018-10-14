@@ -20,9 +20,7 @@
 
 #include <map>
 
-#include <QImageIOHandler>
-#include <QImage>
-#include <QPainter>
+#include <QIODevice>
 
 #include <archive.h>
 
@@ -46,7 +44,7 @@ class OraHandler{
 	public:
 		bool load(QIODevice& device);
 		
-		QImage read();
+		RgbaImage read();
 		
 		int imageCount() const;
 		

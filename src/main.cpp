@@ -131,15 +131,13 @@ int main( int argc, char* argv[] ){
 	//TODO: might not be used everywhere
 	auto name_extension = get_option_value( options, "name-extension" );
 	
-	auto convert_img = [&]( QImage img ){
-			if( options.contains( "--noalpha" ) )
-				img = withoutAlpha( img );
-			
-			if( options.contains( "--discard-transparent" ) )
-				img = discardTransparent( img );
-			
-			return img;
-		};
+	auto apply_transformations = [&]( RgbaView img ){
+		if( options.contains( "--discard-transparent" ) )
+			removeTransparent(img);
+		
+		if( options.contains( "--noalpha" ) )
+			removeAlpha(img);
+	};
 	
 	if(      options.contains( "--help"    ) ) print_help();
 	else if( options.contains( "--version" ) ) print_version();
@@ -173,11 +171,13 @@ int main( int argc, char* argv[] ){
 		files = expandFolders( files );
 		for( auto file : files ){
 			auto images = extract_files( file );
+			for( auto& image : images)
+				apply_transformations( image.second );
 			QString name( QFileInfo(file).completeBaseName() + name_extension );
 			
 			MultiImage multi_img( format );
-			for( auto image : images )
-				multi_img.append( Image( convert_img( {image.second} ) ) );
+			for( auto& image : images )
+				multi_img.append( Image( toQImage( image.second ) ) );
 			
 			optimizeImage( multi_img, name );
 		}
@@ -185,8 +185,10 @@ int main( int argc, char* argv[] ){
 	else if( options.contains( "--combined" ) ){
 		MultiImage multi_img( format );
 		for( auto file : files )
-			for( auto image : extract_files( file ) )
-				multi_img.append( Image( convert_img( image.second ) ) );
+			for( auto& image : extract_files( file ) ){
+				apply_transformations( image.second );
+				multi_img.append( Image( toQImage( image.second ) ) );
+			}
 		
 		optimizeImage( multi_img, QFileInfo(files[0]).completeBaseName() + name_extension );
 	}
@@ -208,7 +210,8 @@ int main( int argc, char* argv[] ){
 			
 			QImage last;
 			for( int j=start; j<files.size(); j++ ){
-				QImage current = convert_img( QImage{files[j]} );
+				QImage current = QImage( files[j] );
+				//TODO: apply_transformations
 				
 				if( options.contains( "--auto" ) && !last.isNull() && !isSimilar( current, last ) )
 					break;

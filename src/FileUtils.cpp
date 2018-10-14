@@ -38,8 +38,8 @@
  *  \param [in] filename File path to cgCompress file
  *  \return The images and the names of the images
  */
-QList<std::pair<QString,QImage>> extract_files( QString filename ){
-	QList<std::pair<QString,QImage>> files;
+std::vector<std::pair<QString,RgbaImage>> extract_files( QString filename ){
+	std::vector<std::pair<QString,RgbaImage>> files;
 	QFile f( filename );
 	if( !f.open( QIODevice::ReadOnly ) )
 		return files;
@@ -53,7 +53,7 @@ QList<std::pair<QString,QImage>> extract_files( QString filename ){
 		auto img = handler.read();
 		//TODO: Check img
 		auto index = QString( "%1" ).arg( i, 4, 10, QChar{'0'} );
-		files.append( { index, img } );
+		files.emplace_back( index, std::move(img) );
 	}
 	
 	return files;
@@ -74,7 +74,7 @@ void extract_cgcompress( QString filename, Format format ){
 	}
 	current.cd( file.baseName() );
 	
-	for( auto file2 : extract_files( filename ) )
+	for( auto& file2 : extract_files( filename ) )
 		format.save( file2.second, current.absolutePath() + "/" + file.baseName() + file2.first + "." + file.suffix() );
 }
 
@@ -94,17 +94,17 @@ void evaluate_cgcompress( QStringList files ){
 		
 		csv.write( images[0].second.width() );
 		csv.write( images[0].second.height() );
-		csv.write( images.size() );
+		csv.write( (int)images.size() );
 		
 		//BMP size
 		QBuffer data;
 		data.open( QBuffer::ReadWrite );
-		for( auto image : images )
+		for( auto& image : images )
 			data.write( Format( "raw" ).to_byte_array( image.second ) );
 		csv.write( int(data.size()) );
 		
 		uint64_t lzma_size = 0;
-		for( auto image : images ){
+		for( auto& image : images ){
 			auto array = Format( "raw" ).to_byte_array( image.second );
 			lzma_size += FileSize::lzma_compress_size( reinterpret_cast<const unsigned char*>(array.data()), array.size() );
 		}
@@ -121,13 +121,13 @@ void evaluate_cgcompress( QStringList files ){
 		
 		//PNG file size
 		uint64_t png_size = 0;
-		for( auto image : images )
+		for( auto& image : images )
 			png_size += Format( "bmp" ).to_byte_array( image.second ).size();
 		csv.write( int(png_size) );
 		
 		//WebP file size
 		uint64_t webp_size = 0;
-		for( auto image : images )
+		for( auto& image : images )
 			webp_size += Format( "webp" ).to_byte_array( image.second ).size();
 		csv.write( int(webp_size) );
 		
@@ -227,24 +227,3 @@ QStringList expandFolders( QStringList paths ){
 	
 	return files;
 }
-
-
-/** \return This image where all transparent pixels are set to discard_color */
-QImage discardTransparent( QImage img, QRgb discard_color ){
-	QImage output( img.convertToFormat(QImage::Format_ARGB32) );
-	
-	auto size = output.size();
-	for( int iy=0; iy<size.height(); iy++ ){
-		QRgb* out = (QRgb*)output.scanLine( iy );
-		for( int ix=0; ix<size.width(); ix++ )
-			if( qAlpha( out[ix] ) == 0 )
-				out[ix] = discard_color;
-	}
-			
-	return output;
-}
-
-QImage withoutAlpha( QImage img ){
-	return img.convertToFormat(QImage::Format_RGB32).convertToFormat(QImage::Format_ARGB32);
-}
-

@@ -42,7 +42,7 @@ class RowIt{
 			
 		T& operator[]( int x ) const { return data[x]; }
 			
-		RowIt<T>& operator*() const { return *this; }
+		RowIt<T>& operator*() { return *this; }
 		
 };
 
@@ -50,24 +50,26 @@ template<typename T>
 class ImageViewBase{
 	protected:
 		T* data;
-		int w, h;
-		int stride;
+		int w, h; //width, height
+		int s; //stride
 		
 		T* fromOffset( int x, int y ) const
-			{ return data + y*stride + x; }
+			{ return data + y*stride() + x; }
 		
 	public:
 		ImageViewBase( T* data, int width, int height, int stride )
-			:	data(data), w(width), h(height), stride(stride) { }
+			:	data(data), w(width), h(height), s(stride) { }
 			
 		ImageViewBase( T* data, int width, int height )
 			:	ImageViewBase<T>( data, width, height, width ) { }
 		
-		auto width()  const{ return w; }
-		auto height() const{ return h; }
+		auto rawData() const{ return data; }
+		auto width()   const{ return w; }
+		auto height()  const{ return h; }
+		auto stride()  const{ return s; }
 		
 		auto operator[]( int y ) const
-			{ return RowIt<T>( fromOffset(0,y), width(), stride ); }
+			{ return RowIt<T>( fromOffset(0,y), width(), stride() ); }
 			
 		auto begin() const{ return (*this)[0]; }
 		auto end()   const{ return (*this)[h]; }
@@ -84,7 +86,7 @@ class ConstImageView : public ImageViewBase<const T>{
 			
 		
 		ConstImageView<T> crop( int x, int y, int newWidth, int newHeight) const
-			{ return { this->fromOffset( x, y ), newWidth, newHeight, this->stride }; }
+			{ return { this->fromOffset( x, y ), newWidth, newHeight, this->stride() }; }
 };
 
 template<typename T>
@@ -103,10 +105,10 @@ class ImageView : public ImageViewBase<T>{
 		}
 		
 		operator ConstImageView<T>() const
-			{ return { this->data, this->w, this->h, this->stride }; }
+			{ return { this->data, this->w, this->h, this->stride() }; }
 		
 		ImageView<T> crop( int x, int y, int newWidth, int newHeight) const
-			{ return { this->fromOffset( x, y ), newWidth, newHeight, this->stride }; }
+			{ return { this->fromOffset( x, y ), newWidth, newHeight, this->stride() }; }
 };
 
 
