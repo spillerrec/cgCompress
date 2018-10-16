@@ -35,7 +35,7 @@ struct Rgba{
 };
 
 inline uint8_t mul8U( uint8_t left, uint8_t right ){
-	return (int(left) * int(right)) >> 8;
+	return (int(left) * int(right)) / 255;
 }
 
 using RgbaImage = Image2<Rgba>;

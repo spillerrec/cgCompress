@@ -95,7 +95,7 @@ bool OraHandler::read_and_validate( archive *a ){
 			QString suffix = QFileInfo(name).suffix();
 			auto img = read_image( a, suffix.toLocal8Bit().constData() );
 			if( img.width() != 0 )
-				images.insert( {name, std::move(img) } );
+				images.emplace( name, std::move(img) );
 			else
 				qWarning( "Could not read data file: %s", name.toLocal8Bit().constData() );
 		}
