@@ -17,6 +17,7 @@
 
 #include "Image.hpp"
 #include "FileSizeEval.hpp"
+#include "formats/FormatWebP.hpp"
 
 #include <cmath>
 
@@ -34,18 +35,15 @@ const auto PIXEL_DIFFERENT = 0; //Pixel do not match with other image
 const auto PIXEL_MATCH = 1;     //Pixel is the same as other image
 const auto PIXEL_SHARED = 2;    //Pixel is the same, but must not be set as it differ in another image
 
-static QImage make_mask( QSize size ){
-	QImage mask( size, QImage::Format_Indexed8 );
-	mask.setColor( PIXEL_MATCH, qRgb(255, 0, 0) );
-	mask.setColor( PIXEL_DIFFERENT, qRgb(0, 255, 0) );
-	mask.setColor( PIXEL_SHARED, qRgb(0, 0, 255) );
+static ImageMask make_mask( QSize size ){
+	ImageMask mask( size.width(), size.height() );
+	mask.fill( DiffType::DIFFERS );
 	return mask;
 }
 
 Image::Image( QPoint pos, QImage img )
 	:	img(img.convertToFormat(QImage::Format_ARGB32), pos), mask(make_mask(img.size()))
 {
-	mask.fill( PIXEL_DIFFERENT );
 }
 
 /** Create a resized version of this image, will keep aspect ratio
@@ -170,16 +168,17 @@ Image Image::combine( Image on_top ) const{
  *  \param [in] input The image to diff on, must have same dimensions
  *  \return The difference */
 Image Image::difference( Image input ) const{
-	//TODO: images must be the same size and at same point
+	if( get_pos() != input.get_pos() && img.size() != input.img.size() )
+		throw std::runtime_error( "Image::difference - input pos/size does not match!" );
 	
 	auto w = img.width();
 	auto mask = make_mask( img.size() );
 	for( int iy=0; iy<img.height(); iy++ ){
 		auto out      =       img.row( iy );
 		auto in       = input.img.row( iy );
-		auto out_mask = mask.scanLine( iy );
+		auto out_mask = mask[ iy ];
 		for( int ix=0; ix<w; ix++ )
-			out_mask[ix] = (in[ix] == out[ix]) ? PIXEL_MATCH : PIXEL_DIFFERENT;
+			out_mask[ix] = (in[ix] == out[ix]) ? DiffType::MATCHES : DiffType::DIFFERS;
 	}
 	
 	return input.newMask( mask );
@@ -191,19 +190,19 @@ Image Image::difference( Image input ) const{
  *  \return An image which contains both images, or an invalid image on failure */
 Image Image::contain_both( Image input ) const{
 	//TODO: images must be the same size and at same point
-	if( mask.isNull() ||input.mask.isNull() )
-		return Image( {0,0}, QImage() );
+	if( mask.valid() || !input.is_valid() )
+		return Image( {0,0}, {} );
 	//TODO: Check the behaviour of this
 	
-	QImage mask_output( mask );
+	ImageMask mask_output = copy( mask );
 	
 	for( int iy=0; iy<mask.height(); iy++ ){
 		auto in1 =       img.row( iy );
 		auto in2 = input.img.row( iy );
 		
-		auto mask1 =       mask.constScanLine( iy );
-		auto mask2 = input.mask.constScanLine( iy );
-		auto mask_out = mask_output.scanLine( iy );
+		auto mask1    =       mask [iy];
+		auto mask2    = input.mask [iy];
+		auto mask_out = mask_output[iy];
 		
 		for( int ix=0; ix<mask.width(); ix++ ){
 			auto pix1 = mask1[ix];
@@ -212,20 +211,20 @@ Image Image::contain_both( Image input ) const{
 			
 			if( in1[ix] != in2[ix] ){
 				//Pixel cannot be shared
-				if( pix1 == PIXEL_DIFFERENT || pix2 == PIXEL_DIFFERENT )
-					return Image( {0,0}, QImage() );
+				if( pix1 == DiffType::DIFFERS || pix1 == DiffType::DIFFERS )
+					return Image( {0,0}, {} );
 				
-				out = PIXEL_SHARED;
+				out = DiffType::SHARED;
 			}
 			else{
 				if( pix1 == pix2 ) //No need to change
 					out = pix1;
-				else if( pix1 == PIXEL_MATCH ) //Other is the more specific
+				else if( pix1 == DiffType::MATCHES ) //Other is the more specific
 					out = pix2;
-				else if( pix2 == PIXEL_MATCH ) //Other is the more specific
+				else if( pix2 == DiffType::MATCHES ) //Other is the more specific
 					out = pix1;
 				else //One is shared, other is set, not allowed
-					return Image( {0,0}, QImage() );
+					return Image( {0,0}, {} );
 			}
 		}
 	}
@@ -238,7 +237,8 @@ Image Image::contain_both( Image input ) const{
 	return newMask( mask_output );
 }
 
-SplitImage Image::split_shared( Image input ) const{
+/*
+SplitImage Image::split_shared( Image input ) const{ //TODO:
 	//TODO: images must be the same size and at same point
 	if( mask.isNull() ||input.mask.isNull() )
 		return {};
@@ -281,29 +281,29 @@ SplitImage Image::split_shared( Image input ) const{
 	result.usefulness = -1;
 	
 	return result;
-}
+}*/
 
 /** Dilate the alpha channel to reduce salt&pepper noise
  *  \param [in] kernel_size How large area around each pixel should be considered
  *  \param [in] threshold How many pixels in the area must be set to enable this pixel
  *  \return The cleaned image */
 Image Image::clean_alpha( int kernel_size, int threshold ) const{
-	QImage output( mask );
+	ImageMask output = copy( mask );
 	int width = output.width(), height = output.height();
 	
 	std::vector<int> line( mask.width(), 0 );
 	int half = kernel_size / 2;
 	
 	//Add/Remove line 'iy' to cache
-	auto add    = [](int& val, unsigned char pix){ val = (pix == PIXEL_DIFFERENT) ? val+1 : val; };
-	auto remove = [](int& val, unsigned char pix){ val = (pix == PIXEL_DIFFERENT) ? val-1 : val; };
+	auto add    = [](int& val, DiffType pix){ val = (pix == DiffType::DIFFERS) ? val+1 : val; };
+	auto remove = [](int& val, DiffType pix){ val = (pix == DiffType::DIFFERS) ? val-1 : val; };
 	auto addLine = [&]( int iy ){
-			auto in = mask.constScanLine( iy );
+			auto in = mask[iy];
 			for( int ix=0; ix<width; ix++ )
 				add( line[ix], in[ix] );
 		};
 	auto removeLine = [&]( int iy ){
-			auto in = mask.constScanLine( iy );
+			auto in = mask[iy];
 			for( int ix=0; ix<width; ix++ )
 				remove( line[ix], in[ix] );
 		};
@@ -313,22 +313,22 @@ Image Image::clean_alpha( int kernel_size, int threshold ) const{
 		addLine( iy );
 	
 	for( int iy=0; iy<height; iy++ ){
-		auto out = output.scanLine( iy );
-		auto in  = mask.constScanLine( iy );
+		auto out = output[iy];
+		auto in  = mask[iy];
 		
 		int kernel = 0;
 		for( int ix=0; ix<std::min(half,width); ix++ )
-			add( kernel, line[ix] );
+			;//add( kernel, line[ix] ); //TODO:
 		
 		for( int ix=0; ix<width; ix++ ){
-			if( in[ix] == PIXEL_MATCH )
+			if( in[ix] == DiffType::MATCHES )
 				if( kernel > threshold )
-					out[ix] = PIXEL_DIFFERENT;
+					out[ix] = DiffType::DIFFERS;
 			
 			if( ix > 0 )
 				remove( kernel, in[ix-1] );
 			if( ix+1 < width )
-				add( kernel, in[ix+1] );
+				;//add( kernel, in[ix+1] ); //TODO:
 		}
 		
 		if( iy > 0 )
@@ -342,7 +342,7 @@ Image Image::clean_alpha( int kernel_size, int threshold ) const{
 
 /** \return This image where all transparent pixels are set to transparent black **/
 QImage Image::remove_transparent() const{
-	if( mask.isNull() )
+	if( !mask.valid() )
 		return qimg(); //Nothing is transparent
 	
 	QImage output( qimg() );
@@ -350,10 +350,10 @@ QImage Image::remove_transparent() const{
 	
 	for( int iy=0; iy<height; iy++ ){
 		auto out = (QRgb*)output.scanLine( iy );
-		auto out_mask = mask.constScanLine( iy );
+		auto out_mask = mask[iy];
 			
 		for( int ix=0; ix<width; ix++ )
-			if( out_mask[ix] != PIXEL_DIFFERENT )
+			if( out_mask[ix] != DiffType::DIFFERS )
 				out[ix] = TRANS_SET;
 	}
 	
@@ -363,25 +363,24 @@ QImage Image::remove_transparent() const{
 struct ContentMap{
 	std::vector<uint8_t> hor;
 	std::vector<uint8_t> ver;
-	ContentMap( QImage mask );
+	ContentMap( ConstImageView<DiffType> mask );
 };
 
-	ContentMap::ContentMap( QImage mask )
+	ContentMap::ContentMap( ConstImageView<DiffType> mask )
 		:	hor( mask.width(), false )
 		,	ver( mask.height(), false ){
 		
-		auto w = mask.width(), h = mask.height();
-		for( int iy=0; iy<h; iy++ ){
-			auto row = mask.constScanLine( iy );
-			for( int ix=0; ix<w; ix++ )
-				if( row[ix] == PIXEL_DIFFERENT )
+		for( int iy=0; iy<mask.height(); iy++ ){
+			auto row = mask[iy];
+			for( int ix=0; ix<mask.width(); ix++ )
+				if( row[ix] == DiffType::DIFFERS )
 					hor[ix] = ver[iy] = true;
 		}
 	}
 /** \return This image, but with image data cropped to only contain non-transparent areas */
 Image Image::auto_crop() const{
-	if( mask.isNull() )
-		return *this;
+	if( !mask.valid() )
+		return Image( qimg() );
 	
 	//Build up lookup for horizontal and vertical lines
 	ContentMap map( mask );
@@ -406,12 +405,10 @@ Image Image::optimize_filesize( Format format ) const{
 	
 	//skip images with no transparency
 	unsigned changeable = 0;
-	for( int iy=0; iy<copy.mask.height(); iy++ ){
-		auto row = copy.mask.constScanLine( iy );
-		for( int ix=0; ix<copy.mask.width(); ix++ )
-			if( row[ix] == PIXEL_MATCH )
+	for( auto row : copy.mask )
+		for( auto value : row )
+			if( value == DiffType::MATCHES )
 				changeable++;
-	}
 	if( changeable == 0 )
 		return copy;
 	
@@ -452,23 +449,22 @@ int Image::compressed_size( Format format, Format::Precision p ) const{
 }
 
 int Image::estimate_compressed_size( Format format ) const{
-	if( mask.isNull() )
-		return format.file_size( remove_transparent(), Format::LOW );
+	//if( !mask.valid() )
+	//	return format.file_size( remove_transparent(), Format::LOW );
 	
-	return FileSize::image_gradient_sum( img, mask, PIXEL_DIFFERENT );
+	return FormatWebP::estimate_filesize( remove_transparent(), true );
+	//return FileSize::image_gradient_sum( img, mask, PIXEL_DIFFERENT );
 	return FileSize::lz4compress_size( remove_transparent() );
 }
 
 int Image::alpha_count() const{
-	if( mask.isNull() )
+	if( !mask.valid() )
 		qFatal( "Image::alpha_count() not implemented for RGB" );
 	
 	int count = 0;
-	for( int iy=0; iy<mask.height(); iy++ ){
-		auto row = mask.scanLine( iy );
-		for( int ix=0; ix<mask.width(); ix++ )
-			count += (row[ix] == PIXEL_DIFFERENT) ? 1 : 0;
-	}
+	for( auto row : mask )
+		for( auto value : row )
+			count += (value == DiffType::DIFFERS) ? 1 : 0;
 	
 	return count;
 }
@@ -495,10 +491,10 @@ Image Image::fromTransparent( QImage img ){
 	auto mask = make_mask( img.size() );
 	
 	for( int iy=0; iy<img.height(); iy++ ){
-		auto out = mask.scanLine( iy );
+		auto out = mask[iy];
 		auto in = (const QRgb*)img.constScanLine( iy );
 		for( int ix=0; ix<img.width(); ix++ )
-			out[ix] = (qAlpha(in[ix]) != 0) ? PIXEL_DIFFERENT : PIXEL_MATCH;
+			out[ix] = (qAlpha(in[ix]) != 0) ? DiffType::DIFFERS : DiffType::MATCHES;
 	}
 	
 	return Image( img ).newMask( mask );

@@ -23,6 +23,7 @@
 #include "Frame.hpp"
 
 #include <utility>
+#include <vector>
 
 /** Save images in a zip archive using the OpenRaster conventions.
  *  This means, STORED mimetype file as the first file, stack.xml file
@@ -31,15 +32,15 @@
  */
 class OraSaver {
 	private:
-		QList<Image> primitives;
-		QList<Frame> frames;
+		std::vector<Image> primitives;
+		std::vector<Frame> frames;
 		
 	public:
 		/** \param [in] primitives The primitives that the frames need
 		 *  \param [in] frames All the frames to save */
-		OraSaver( QList<Image> primitives, QList<Frame> frames )
-			:	primitives(primitives), frames(frames) { }
-		OraSaver( QList<Image> images );
+		OraSaver( std::vector<Image> primitives, std::vector<Frame> frames )
+			:	primitives(std::move(primitives)), frames(std::move(frames)) { }
+		OraSaver( std::vector<Image> images );
 		
 		void save( QString path, Format format ) const;
 		

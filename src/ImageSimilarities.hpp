@@ -25,13 +25,13 @@
 
 class Image;
 
-class ImageMask{
+class ImageSimMask{
 	private:
 		QImage mask;
 		
 	public:
-		ImageMask( int width, int height );
-		ImageMask( QSize size ) : ImageMask( size.width(), size.height() ) { }
+		ImageSimMask( int width, int height );
+		ImageSimMask( QSize size ) : ImageSimMask( size.width(), size.height() ) { }
 		
 		auto width() const { return mask.width(); }
 		auto height() const { return mask.height(); }
@@ -40,7 +40,7 @@ class ImageMask{
 		auto constScanLine( int iy ) const { return mask.constScanLine( iy ); }
 		void fill( unsigned value ){ mask.fill( value ); }
 		
-		void combineMasks( ImageMask combine_with );
+		void combineMasks( ImageSimMask combine_with );
 		Image apply( QImage image ) const;
 };
 
@@ -55,9 +55,9 @@ class RefImage{
 		
 		uint16_t* getRow( int iy );
 		
-		void setMaskTo( ImageMask mask, uint16_t value );
+		void setMaskTo( ImageSimMask mask, uint16_t value );
 		void fill( uint16_t value );
-		ImageMask getMaskOf( uint16_t value );
+		ImageSimMask getMaskOf( uint16_t value );
 };
 
 /** Contains an image which is made up of many similar images */
@@ -71,7 +71,7 @@ class ImageSimilarities {
 	public:
 		void addImage( QImage img );
 		Image getImagePart( int id, int ref );
-		ImageMask getMask( int id, int ref );
+		ImageSimMask getMask( int id, int ref );
 };
 
 #endif

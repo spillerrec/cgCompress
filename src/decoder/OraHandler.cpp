@@ -152,11 +152,18 @@ bool OraHandler::load(QIODevice& device){
 }
 
 static void alpha_replace( RgbaView output, ConstRgbaView image, int dx, int dy ){
-	Blending::BlendImages<Rgba>( output.crop( dx, dy, image.width(), image.height() ), image, Blending::alphaReplace );
+	auto new_width  = std::min(image.width() , output.width()-dx);
+	auto new_height = std::min(image.height(), output.width()-dy);
+	//TODO: Warning if inconsistent?
+	auto crop = output.crop( dx, dy, new_width, new_height );
+	Blending::BlendImages<Rgba>( crop, image.crop(0,0,new_width,new_height), Blending::alphaReplace );
 }
 
 static void src_over( RgbaView output, ConstRgbaView image, int dx, int dy ){
-	Blending::BlendImages<Rgba>( output.crop( dx, dy, image.width(), image.height() ), image, Blending::srcOverRgba );
+	auto new_width  = std::min(image.width() , output.width()-dx);
+	auto new_height = std::min(image.height(), output.width()-dy);
+	auto crop = output.crop( dx, dy, new_width, new_height );
+	Blending::BlendImages<Rgba>( crop, image.crop(0,0,new_width,new_height), Blending::srcOverRgba );
 }
 
 void OraHandler::render_stack( xml_node node, RgbaImage &output, int offset_x, int offset_y ) const{

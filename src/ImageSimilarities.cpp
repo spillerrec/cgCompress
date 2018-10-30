@@ -23,10 +23,10 @@
 const int MASK_TRUE  = 1;
 const int MASK_FALSE = 0;
 
-ImageMask::ImageMask( int width, int height )
+ImageSimMask::ImageSimMask( int width, int height )
 	: mask( width, height, QImage::Format_Indexed8 ) { }
 	
-void ImageMask::combineMasks( ImageMask combine_with ){
+void ImageSimMask::combineMasks( ImageSimMask combine_with ){
 	assert( size() == combine_with.size() );
 	
 	for( int iy=0; iy<height(); iy++ ){
@@ -48,7 +48,7 @@ uint16_t* RefImage::getRow( int iy ){
 	return refs.get() + iy*width;
 }
 
-void RefImage::setMaskTo( ImageMask mask, uint16_t value ){
+void RefImage::setMaskTo( ImageSimMask mask, uint16_t value ){
 	assert( mask.width() == width && mask.height() == height );
 	
 	for( int iy=0; iy<height; iy++ ){
@@ -65,8 +65,8 @@ void RefImage::fill( uint16_t value ){
 		refs[i] = value;
 }
 
-ImageMask RefImage::getMaskOf( uint16_t value ){
-	ImageMask mask( width, height );
+ImageSimMask RefImage::getMaskOf( uint16_t value ){
+	ImageSimMask mask( width, height );
 	
 	for( int iy=0; iy<height; iy++ ){
 		auto row = getRow( iy );
@@ -79,12 +79,12 @@ ImageMask RefImage::getMaskOf( uint16_t value ){
 	return mask;
 }
 
-static ImageMask createMask( QImage img1, QImage img2, ImageMask& mask ){
+static ImageSimMask createMask( QImage img1, QImage img2, ImageSimMask& mask ){
 	//The mask could be used to ignore already masked areas
 	assert( img1.size() == img2.size() );
 	assert( img1.size() == mask.size() );
 	
-	ImageMask new_mask = mask;
+	ImageSimMask new_mask = mask;
 	new_mask.fill( MASK_FALSE );
 	
 	for( int iy=0; iy<img1.height(); iy++ ){
@@ -108,7 +108,7 @@ static QRgb makeTransparent( QRgb color )
 	{ return 0; }//qRgba( qRed( color ), qGreen( color ), qBlue( color ), 0 ); }
 
 //TODO: Use 'Image' class to support transparency?
-Image ImageMask::apply( QImage image ) const{
+Image ImageSimMask::apply( QImage image ) const{
 	assert( image.size() == size() );
 	
 	for( int iy=0; iy<image.height(); iy++ ){
@@ -127,7 +127,7 @@ void ImageSimilarities::addImage( QImage img ){
 	//TODO: All this should be optimized by ignoring large empty areas
 	
 	//The parts already covered by previous images
-	ImageMask already_masked( img.size() );
+	ImageSimMask already_masked( img.size() );
 	already_masked.fill( MASK_FALSE );
 	
 	//The indexes of other images sharing same pixels
@@ -145,7 +145,7 @@ void ImageSimilarities::addImage( QImage img ){
 	refs.emplace_back( std::move(new_ref) );
 }
 
-ImageMask ImageSimilarities::getMask( int id, int ref ){
+ImageSimMask ImageSimilarities::getMask( int id, int ref ){
 	assert( id >= 0 && id < int(originals.size()) );
 	
 	return refs[id].getMaskOf(ref);

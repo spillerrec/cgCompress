@@ -25,10 +25,26 @@
 #include "Format.hpp"
 #include "SubQImage.hpp"
 
+#include "images/Rgba.hpp"
+
+enum class DiffType{
+		MATCHES //Pixel is the same as base
+	,	DIFFERS //Pixel is different from base
+	,	SHARED  //Pixel matches some bases, does not in others
+};
+
+struct DiffPixel{
+	DiffType value;
+	
+	
+};
+
+using ImageMask = Image2<DiffType>;
+
 class Image {
 	private:
 		SubQImage img;
-		QImage mask;
+		ImageMask mask;
 		
 		QByteArray saved_data;
 		
@@ -43,9 +59,21 @@ class Image {
 		/** \param [in] path Load the image at **path** on the file system */
 		Image( QString path ) : Image( QImage(path) ) { }
 		
+		Image( const Image& other )
+			:	img(other.img), mask(copy(other.mask))
+			,	saved_data(other.saved_data)
+			{ }
+		
+		Image& operator=( const Image& other ){
+			img = other.img;
+			mask = copy(other.mask);
+			saved_data = other.saved_data;
+			return *this;
+		}
+		
 	private:
-		Image( SubQImage img, QImage mask ) : img(img), mask(mask) { }
-		Image newMask( QImage mask ) const{ return Image( img, mask ); }
+		Image( SubQImage img, ImageMask mask ) : img(img), mask(std::move(mask)) { }
+		Image newMask( ConstImageView<DiffType> mask ) const{ return Image( img, copy(mask) ); }
 		/*
 		QList<Image> segment() const;
 		QList<Image> diff_segment( Image diff ) const;*/
@@ -89,14 +117,14 @@ class Image {
 		Image sub_image( int x, int y, int width, int height ) const{
 			QSize newSize( std::min( x+width,  x+mask.width()  ) - x
 			             , std::min( y+height, y+mask.height() ) - y );
-			auto newMask = newSize.isNull() ? QImage() : mask.copy( x,y, newSize.width(), newSize.height() );
-			return Image( img.copy( {x,y}, newSize ), newMask );
+			auto newMask = newSize.isNull() ? ImageMask() : copy( mask.crop( x,y, newSize.width(), newSize.height() ) );
+			return Image( img.copy( {x,y}, newSize ), std::move(newMask) );
 		}
 		
 		Image combine( Image on_top ) const;
 		
 		Image contain_both( Image diff ) const;
-		struct SplitImage split_shared( Image other ) const;
+		//struct SplitImage split_shared( Image other ) const;
 		
 		/** Calculates file size of the image; wrapper for Format::file_size()
 		 *  \param [in] format Format used for compression
@@ -128,7 +156,7 @@ class Image {
 		static Image fromTransparent( QImage img );
 };
 
-
+/*
 struct SplitImage{
 	Image shared;
 	Image first;
@@ -137,6 +165,6 @@ struct SplitImage{
 	int index{ -1 };
 	SplitImage() : shared( {0,0}, {} ), first(shared), second(shared) {}
 };
-
+*/
 #endif
 

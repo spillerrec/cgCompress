@@ -28,8 +28,9 @@ Image Converter::get_primitive() const{
 	return (*base_images)[from].difference( (*base_images)[to] );
 }
 
-QList<int> Converter::path( const QList<Converter>& converters, int from, int to ){
-	auto conv_path = QList<int>() << from;
+std::vector<int> Converter::path( const QList<Converter>& converters, int from, int to ){
+	std::vector<int> conv_path;
+	conv_path.push_back( from );
 	
 	for( int current = from; current != to; ){
 		//Find matching converter
@@ -39,12 +40,12 @@ QList<int> Converter::path( const QList<Converter>& converters, int from, int to
 			throw std::runtime_error( "Converter::path() could not find a complete path" );
 		
 		current = match->get_from();
-		conv_path << current;
+		conv_path.push_back( current );
 	}
 	
 	//Reverse list, from https://stackoverflow.com/a/20652805/2248153
 	for( int k=0, s=conv_path.size(), max=s/2; k<max; k++ )
-		conv_path.swap( k, s-1-k );
+		std::swap( conv_path[k], conv_path[s-1-k] );
 	
 	return conv_path;
 }

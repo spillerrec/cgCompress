@@ -18,6 +18,8 @@
 #ifndef IMAGE_VIEW_HPP
 #define IMAGE_VIEW_HPP
 
+#include <cstring>
+
 template<typename T>
 class RowIt{
 	private:
@@ -67,6 +69,7 @@ class ImageViewBase{
 		auto width()   const{ return w; }
 		auto height()  const{ return h; }
 		auto stride()  const{ return s; }
+		bool valid()   const{ return data && width()>0 && height()>0; }
 		
 		auto operator[]( int y ) const
 			{ return RowIt<T>( fromOffset(0,y), width(), stride() ); }
@@ -109,6 +112,17 @@ class ImageView : public ImageViewBase<T>{
 		
 		ImageView<T> crop( int x, int y, int newWidth, int newHeight) const
 			{ return { this->fromOffset( x, y ), newWidth, newHeight, this->stride() }; }
+		
+		void copyFrom( ConstImageView<T> other ){
+			//if( this->stride() == other.stride() ){
+				//TODO: Fast copy
+			//}
+			//else{
+				//TODO: Line by line copy
+				for( int iy=0; iy<this->height(); iy++ )
+					std::memcpy((*this)[iy].begin(), other[iy].begin(), sizeof(T)*this->width());
+			//}
+		}
 };
 
 

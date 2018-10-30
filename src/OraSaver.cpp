@@ -25,11 +25,11 @@
  *  
  *  \param [in] images The images to form individual frames
  */
-OraSaver::OraSaver( QList<Image> images ) : primitives( images ){
+OraSaver::OraSaver( std::vector<Image> images ) : primitives( std::move(images) ){
 	Frame frame( primitives, {} );
-	for( int i=0; i<images.size(); i++ )
-		frame.layers.append( i );
-	frames.append( frame );
+	for( unsigned i=0; i<primitives.size(); i++ )
+		frame.layers.push_back( i );
+	frames.push_back( frame );
 }
 
 
@@ -107,12 +107,12 @@ void OraSaver::save( QString path, QString mimetype, QString stack, QList<std::p
  *  \param [in] format Format for compressing the image files
  */
 void OraSaver::save( QString path, Format format ) const{
-	if( frames.isEmpty() ){
+	if( frames.size() == 0 ){
 		qWarning( "OraSaver: no frames to save!" );
 		return;
 	}
 	
-	auto first_frame = frames.first().reconstruct();
+	auto first_frame = frames.front().reconstruct();
 	
 	QList<std::pair<QString,QByteArray>> files;
 	

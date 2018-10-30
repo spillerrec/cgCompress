@@ -33,7 +33,23 @@ class Image2 : public ImageView<T>{
 		Image2() : Image2(nullptr, 0, 0) {}
 		Image2( int width, int height )
 			: Image2( new T[width*height], width, height ) {}
+		
+		
+		bool operator==( ConstImageView<T> other ) const{
+			return false; //TODO:
+		}
 };
+
+template<typename T>
+Image2<T> copy( ConstImageView<T> copy_src ){
+	Image2<T> out( copy_src.width(), copy_src.height() );
+	out.copyFrom( copy_src );
+	return out;
+}
+template<typename T>
+Image2<T> copy( ImageView<T> copy_src ){
+	return copy( (ConstImageView<T>)copy_src );
+}
 
 #endif
 

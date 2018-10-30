@@ -20,25 +20,25 @@
 
 #include "Image.hpp"
 
-#include <QList>
+#include <vector>
 
 /** A single frame in a multi image */
 class Frame {
 	public:
 		/// Images for reconstructing the original image
-		QList<Image> primitives;
+		std::vector<Image> primitives;
 		
 		/// The indexes to primitives used for reconstructing
-		QList<int> layers;
+		std::vector<int> layers;
 		
 		/** \param [in] primitives The primitives used to build the frame
 		  * \param [in] layers The specific order of the primitives used */
-		Frame( QList<Image> primitives, QList<int> layers )
-			: primitives( primitives ), layers( layers ) { }
+		Frame( std::vector<Image> primitives, std::vector<int> layers )
+			: primitives( std::move(primitives) ), layers( std::move(layers) ) { }
 		
 		Image reconstruct() const;
 		
-		void update_ids( int from, QList<int> to );
+		void update_ids( int from, std::vector<int> to );
 		
 		void remove_pointless_layers();
 };

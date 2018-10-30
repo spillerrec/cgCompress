@@ -23,26 +23,27 @@ Image Frame::reconstruct() const{
 		return Image( QPoint(0,0), QImage() );
 	
 	Image image( primitives[layers[0]] );
-	for( int i=1; i<layers.size(); i++ )
+	for( size_t i=1; i<layers.size(); i++ )
 		image = image.combine( primitives[layers[i]] );
 	return image;
 }
 
-void Frame::update_ids( int from, QList<int> to ){
-	QList<int> new_layers;
+void Frame::update_ids( int from, std::vector<int> to ){
+	std::vector<int> new_layers;
 	
 	for( auto layer : layers ){
 		if( layer != from )
-			new_layers << layer;
+			new_layers.push_back( layer );
 		else
-			new_layers << to;
+			for( auto l : to )
+				new_layers.push_back( l );
 	}
 	
 	layers = new_layers;
 }
 
-void Frame::remove_pointless_layers(){
-	//Final result, anything we do must not change this!
+void Frame::remove_pointless_layers(){ //TODO:
+	/*//Final result, anything we do must not change this!
 	auto truth = reconstruct();
 	
 	//Try to remove each layer one at a time
@@ -60,7 +61,7 @@ void Frame::remove_pointless_layers(){
 	}
 	
 	//Properly remove the layers we marked as pointless
-	layers.removeAll( -1 );
+	layers.removeAll( -1 );*/
 }
 
 

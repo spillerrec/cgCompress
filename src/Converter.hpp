@@ -24,6 +24,7 @@
 
 #include <QList>
 #include <QByteArray>
+#include <vector>
 
 /** Describes a way to get from one image to another, and the file size cost.
  *  \todo support multiple steps in the conversion
@@ -60,7 +61,7 @@ class Converter {
 		/** \return The image used for converting **/
 		Image get_primitive() const;
 		
-		static QList<int> path( const QList<Converter>& converters, int from, int to=0 );
+		static std::vector<int> path( const QList<Converter>& converters, int from, int to=0 );
 		
 		static auto less_size( const Converter& a, const Converter& b ){ return a.size < b.size; }
 		static auto less_to(   const Converter& a, const Converter& b ){ return a.to   < b.to  ; }
