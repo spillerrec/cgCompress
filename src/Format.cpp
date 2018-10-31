@@ -23,8 +23,7 @@
 #include <QByteArray>
 #include <QFile>
 
-static QByteArray to_raw_data( QImage img ){
-	img = img.convertToFormat( QImage::Format_ARGB32 );
+static QByteArray to_raw_data( ConstRgbaView img ){
 	auto alpha = true; //Always including alpha actually seems to work better
 	
 	//Construct image
@@ -32,14 +31,14 @@ static QByteArray to_raw_data( QImage img ){
 	QByteArray data( img.width()*img.height()*pixel_size, 0 );
 	
 	for( int iy=0; iy<img.height(); iy++ ){
-		auto row = (const QRgb*)img.constScanLine( iy );
+		auto row = img[iy];
 		for( int ix=0; ix<img.width(); ix++ ){
 			auto offset = iy*img.width()*pixel_size + ix*pixel_size;
-			data[offset + 0] = qRed(   row[ix] );
-			data[offset + 1] = qGreen( row[ix] );
-			data[offset + 2] = qBlue(  row[ix] );
+			data[offset + 0] = row[ix].r;
+			data[offset + 1] = row[ix].g;
+			data[offset + 2] = row[ix].b;
 			if( alpha )
-				data[offset + 3] = qAlpha( row[ix] );
+				data[offset + 3] = row[ix].a;
 		}
 	}
 	
@@ -53,9 +52,10 @@ static QByteArray to_raw_data( QImage img ){
  *  \return buffer containing the compressed image
  */
 QByteArray Format::to_byte_array( QImage img, bool keep_alpha ) const{
-	if( format.toLower() == "raw" )
-		return to_raw_data( img );
-	
+	return to_byte_array( fromQImage( img ), keep_alpha );
+}
+
+QByteArray Format::to_byte_array( ConstRgbaView img, bool keep_alpha ) const{
 	QByteArray data;
 	QBuffer buffer( &data );
 	buffer.open( QIODevice::WriteOnly );
@@ -64,48 +64,30 @@ QByteArray Format::to_byte_array( QImage img, bool keep_alpha ) const{
 			FormatWebP::write( img, buffer, keep_alpha, 100 );
 		else
 			FormatWebP::writeLossy( img, buffer, get_quality() );
+		return data;
 	}
-	else
-		img.save( &buffer, ext(), get_quality() );
+	else if( format.toLower() == "raw" )
+		return to_raw_data( img );
+	
+	toQImage(img).save( &buffer, ext(), get_quality() );
 	return data;
 }
 
-QByteArray Format::to_byte_array( ConstRgbaView img, bool keep_alpha ) const{
-	QByteArray data;
-	QBuffer buffer( &data );
-	buffer.open( QIODevice::WriteOnly );
-	if( format.toLower() == "webp" )
-		if( get_quality() == 100 ){
-			FormatWebP::write( img, buffer, keep_alpha, 100 );
-			return data;
-		}
-	
-	return to_byte_array(toQImage(img));
-}
-
 bool Format::save( QImage img, QString path ) const{
+	return save( fromQImage(img), path );
+}
+bool Format::save( ConstRgbaView img, QString path ) const{
 	if( format.toLower() == "raw" ){
 		qWarning( "RAW mode should not be saved, only available as to_byte_array()" );
 		return false;
 	}
-	if( format.toLower() == "webp" ){
-		QFile file( filename(path) );
-		if( !file.open( QIODevice::WriteOnly ) )
-			return false;
-		return FormatWebP::write( img, file, true, true );
-	}
 	
-	return img.save( filename(path), ext(), get_quality() );
-}
-bool Format::save( ConstRgbaView img, QString path ) const{
-	if( format.toLower() == "webp" ){
-		QFile file( filename(path) );
-		if( !file.open( QIODevice::WriteOnly ) )
-			return false;
-		return FormatWebP::write( img, file, true, true );
-	}
+	QFile file( filename(path) );
+	if( !file.open( QIODevice::WriteOnly ) )
+		return false;
 	
-	return save( toQImage( img ), path );
+	file.write( to_byte_array( img, true ) );
+	return true; //TODO: check write
 }
 
 /** Estimate file size when compressed

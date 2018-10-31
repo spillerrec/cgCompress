@@ -15,7 +15,6 @@
 	along with cgCompress.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-class QImage;
 class QByteArray;
 class QIODevice;
 
@@ -23,11 +22,9 @@ class QIODevice;
 
 
 namespace FormatWebP{
-	QImage read( QByteArray data );
 	RgbaImage readRgbaImage( QByteArray data );
-	bool write( QImage image, QIODevice& device, bool keep_alpha=true, int quality=100 );
 	bool write( ConstRgbaView image, QIODevice& device, bool keep_alpha=true, int quality=100 );
-	bool writeLossy( QImage, QIODevice& device, int quality );
+	bool writeLossy( ConstRgbaView, QIODevice& device, int quality );
 	int estimate_filesize( ConstRgbaView image, bool keep_alpha );
 }
 

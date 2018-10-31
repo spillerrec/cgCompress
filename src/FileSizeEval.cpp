@@ -19,8 +19,6 @@
 #include "SubImage.hpp"
 #include "Compression.hpp"
 
-#include <QImage>
-
 
 static int compressed_lz4_size( const std::vector<uint8_t>& data ){
 	return FileSize::lz4compress_size( data.data(), data.size() );
@@ -50,30 +48,6 @@ int FileSize::image_gradient_sum( ConstRgbaView img ){
 	return diffs;
 }
 
-int FileSize::image_gradient_sum( const SubImage& img, QImage mask, int pixel_different ){
-	int diffs = 0;
-	
-	auto w = img.width();
-	for( int iy=0; iy<img.height(); iy++ ){
-		auto row_alpha = mask.constScanLine( iy );
-		auto row = img.view()[iy];
-		for( int ix=1; ix<w; ix++ ){
-			auto alpha_left  = row_alpha[ix-1] != pixel_different;
-			auto alpha_right = row_alpha[ix  ] != pixel_different;
-			diffs += (alpha_left != alpha_right) ? 255 : 0;
-			//TODO: not great for images with transparency
-			//we add the difference in shown pixels
-			if( !(alpha_left || alpha_right) ){
-				Rgba left = row[ix-1], right = row[ix];
-				diffs += abs( (int)left.r - right.r );
-				diffs += abs( (int)left.g - right.g );
-				diffs += abs( (int)left.b - right.b );
-			}
-		}
-	}
-	
-	return diffs;
-}
 
 int FileSize::lz4compress_size( ConstRgbaView img ){
 	std::vector<uint8_t> data;

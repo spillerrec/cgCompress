@@ -19,7 +19,6 @@
 
 #include <QBuffer>
 #include <QFileInfo>
-#include <QImageReader>
 #include <QFile>
 
 #include <QDebug>

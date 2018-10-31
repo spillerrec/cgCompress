@@ -18,10 +18,6 @@
 #ifndef IMAGE_HPP
 #define IMAGE_HPP
 
-#include <QDebug>
-#include <QImage>
-#include <QByteArray>
-
 #include "Format.hpp"
 #include "SubImage.hpp"
 
@@ -31,12 +27,6 @@ enum class DiffType{
 		MATCHES //Pixel is the same as base
 	,	DIFFERS //Pixel is different from base
 	,	SHARED  //Pixel matches some bases, does not in others
-};
-
-struct DiffPixel{
-	DiffType value;
-	
-	
 };
 
 using ImageMask = Image2<DiffType>;
@@ -55,9 +45,6 @@ class Image {
 		
 		/** \param [in] img QImage which will be converted to ARGB32 and positioned at {0,0} */
 		Image( ConstRgbaView img=ConstRgbaView() ) : Image( {0,0}, img ) { }
-		
-		// /** \param [in] path Load the image at **path** on the file system */
-		//Image( QString path ) : Image( QImage(path) ) { }
 		
 		Image( const Image& other )
 			:	img(other.img), mask(copy(other.mask))

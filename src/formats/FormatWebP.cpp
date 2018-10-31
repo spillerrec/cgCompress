@@ -16,12 +16,6 @@
 */
 
 #include <QImage>
-#include <QByteArray>
-#include <QImageIOHandler>
-#include <QImageIOPlugin>
-#include <QColor>
-#include <QVariant>
-
 #include <memory>
 
 
@@ -29,27 +23,6 @@
 #include "../images/Rgba.hpp"
 #include "webp/decode.h"
 #include "webp/encode.h"
-
-QImage FormatWebP::read( QByteArray data ){
-	int width, height;
-	
-	uint8_t *raw = WebPDecodeRGBA( (uint8_t*)data.data(), data.size(), &width, &height );
-	if( !raw )
-		return { };
-	
-	QImage img( width, height, QImage::Format_ARGB32 );
-	for( int iy=0; iy<height; iy++ ){
-		QRgb* row = (QRgb*)img.scanLine( iy );
-		
-		for( int ix=0; ix<width; ix++ ){
-			uint8_t *pixel = raw + ( iy*width + ix ) * 4;
-			row[ix] = qRgba( pixel[0], pixel[1], pixel[2], pixel[3] );
-		}
-	}
-	
-	free( raw );
-	return img;
-}
 
 
 RgbaImage FormatWebP::readRgbaImage( QByteArray data ){
@@ -75,7 +48,6 @@ class Compressor{
 		Compressor(){ writer.mem = nullptr; }
 		~Compressor(){ free( writer.mem ); }
 		
-		bool init( QImage );
 		bool init( ConstRgbaView );
 		
 		void setupLossless( bool keep_alpha, int quality=100 );
@@ -84,39 +56,7 @@ class Compressor{
 		bool write( QIODevice& );
 		int fileSize();
 };
-bool Compressor::init( QImage image ){
-	unsigned stride = 4 * image.width();
-	data = std::make_unique<uint8_t[]>( stride * image.height() );
-	
-	//Make sure the input is in ARGB
-	if( image.format() != QImage::Format_RGB32 && image.format() != QImage::Format_ARGB32 )
-		image = image.convertToFormat( QImage::Format_ARGB32 );
-	
-	for( int iy=0; iy<image.height(); ++iy ){
-		const QRgb* in = (const QRgb*)image.constScanLine( iy );
-		uint8_t* out = data.get() + iy*stride;
-		
-		for( int ix=0; ix<image.width(); ++ix, ++in ){
-			*(out++) = qBlue(  *in );
-			*(out++) = qGreen( *in );
-			*(out++) = qRed(   *in );
-			*(out++) = qAlpha( *in );
-		}
-	}
-	
-	//Initialize structures
-	if( !WebPPictureInit( &pic ) || !WebPConfigInit( &config ) )
-		return false;
-	
-	pic.width  = image.width();
-	pic.height = image.height();
-	pic.argb_stride = stride;
-	pic.use_argb = true;
-	pic.argb = (uint32_t*)data.get();
-	pic.argb_stride = image.width();
-	
-	return true;
-}
+
 bool Compressor::init( ConstRgbaView image ){
 	//Initialize structures
 	if( !WebPPictureInit( &pic ) || !WebPConfigInit( &config ) )
@@ -175,16 +115,6 @@ int Compressor::fileSize(){
 	return writer.size;
 }
 
-bool FormatWebP::write( QImage image, QIODevice& device, bool keep_alpha, int quality ){
-	Compressor webp;
-	if( !webp.init( image ) )
-		return false;
-	
-	webp.setupLossless( keep_alpha, quality );
-	
-	return webp.write( device );
-}
-
 bool FormatWebP::write( ConstRgbaView image, QIODevice& device, bool keep_alpha, int quality ){
 	Compressor webp;
 	if( !webp.init( image ) )
@@ -195,8 +125,9 @@ bool FormatWebP::write( ConstRgbaView image, QIODevice& device, bool keep_alpha,
 	return webp.write( device );
 }
 
-bool FormatWebP::writeLossy( QImage image, QIODevice& device, int quality ){
-	return image.save( &device, "webp", quality ); //TODO: Quickfix
+bool FormatWebP::writeLossy( ConstRgbaView image, QIODevice& device, int quality ){
+	return toQImage(image).save( &device, "webp", quality ); //TODO: Quickfix
+	
 	Compressor webp;
 	if( !webp.init( image ) )
 		return false;

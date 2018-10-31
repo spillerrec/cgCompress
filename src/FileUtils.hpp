@@ -20,7 +20,6 @@
 
 #include <QString>
 #include <QDir>
-#include <QImage>
 #include <vector>
 
 #include "Format.hpp"

@@ -24,7 +24,6 @@
 
 #include <QFile>
 #include <QFileInfo>
-#include <QImageReader>
 #include <QBuffer>
 #include <QVariant>
 
