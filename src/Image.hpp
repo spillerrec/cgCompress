@@ -23,7 +23,7 @@
 #include <QByteArray>
 
 #include "Format.hpp"
-#include "SubQImage.hpp"
+#include "SubImage.hpp"
 
 #include "images/Rgba.hpp"
 
@@ -43,7 +43,7 @@ using ImageMask = Image2<DiffType>;
 
 class Image {
 	private:
-		SubQImage img;
+		SubImage img;
 		ImageMask mask;
 		
 		QByteArray saved_data;
@@ -72,7 +72,7 @@ class Image {
 		}
 		
 	private:
-		Image( SubQImage img, ImageMask mask ) : img(img), mask(std::move(mask)) { }
+		Image( SubImage img, ImageMask mask ) : img(img), mask(std::move(mask)) { }
 		Image newMask( ConstImageView<DiffType> mask ) const{ return Image( img, copy(mask) ); }
 		/*
 		QList<Image> segment() const;

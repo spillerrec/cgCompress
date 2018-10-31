@@ -25,16 +25,16 @@
 
 /** Provides ReadOnly access to a region of a QImage without copying.
  *  row() and rowIndex() provides pixel access which is offset and casted correctly */
-class SubQImage{
+class SubImage{
 	private:
 		ConstRgbaView img;
 		QPoint pos;
 		QSize subsize;
 		
-		SubQImage( ConstRgbaView img, QPoint pos, QSize subsize )
+		SubImage( ConstRgbaView img, QPoint pos, QSize subsize )
 			:	img(img), pos(pos), subsize(subsize) {}
 	public:
-		SubQImage( ConstRgbaView img, QPoint pos={0,0} )
+		SubImage( ConstRgbaView img, QPoint pos={0,0} )
 			:	img(img), pos(pos), subsize(img.width(), img.height()) { }
 		
 		auto offset() const{ return pos; }
@@ -48,10 +48,10 @@ class SubQImage{
 		
 		auto operator[]( int iy ) const { return view()[iy]; }
 		
-		SubQImage copy( QPoint pos, QSize size ) const
+		SubImage copy( QPoint pos, QSize size ) const
 			{ return { img, offset() + pos, size }; }
 		
-		bool operator==( const SubQImage& other ) const
+		bool operator==( const SubImage& other ) const
 			{	return img == other.img && pos == other.pos && subsize == other.subsize; }
 };
 

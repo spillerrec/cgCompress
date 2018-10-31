@@ -16,7 +16,7 @@
 */
 
 #include "FileSizeEval.hpp"
-#include "SubQImage.hpp"
+#include "SubImage.hpp"
 #include "Compression.hpp"
 
 #include <QImage>
@@ -50,7 +50,7 @@ int FileSize::image_gradient_sum( ConstRgbaView img ){
 	return diffs;
 }
 
-int FileSize::image_gradient_sum( const SubQImage& img, QImage mask, int pixel_different ){
+int FileSize::image_gradient_sum( const SubImage& img, QImage mask, int pixel_different ){
 	int diffs = 0;
 	
 	auto w = img.width();

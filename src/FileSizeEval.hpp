@@ -25,13 +25,13 @@
 	However they are not compariable with final filesize or another metric
 */
 
-class SubQImage;
+class SubImage;
 class QImage;
 
 namespace FileSize{
 
 int image_gradient_sum( ConstRgbaView img );
-int image_gradient_sum( const SubQImage& img, QImage mask, int pixel_different );
+int image_gradient_sum( const SubImage& img, QImage mask, int pixel_different );
 int lz4compress_size( ConstRgbaView img );
 
 }
