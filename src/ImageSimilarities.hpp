@@ -23,6 +23,8 @@
 #include <memory>
 #include <vector>
 
+#include "images/Rgba.hpp"
+
 class Image;
 
 class ImageSimMask{
@@ -41,7 +43,7 @@ class ImageSimMask{
 		void fill( unsigned value ){ mask.fill( value ); }
 		
 		void combineMasks( ImageSimMask combine_with );
-		Image apply( QImage image ) const;
+		//Image apply( QImage image ) const;
 };
 
 class RefImage{
@@ -63,14 +65,14 @@ class RefImage{
 /** Contains an image which is made up of many similar images */
 class ImageSimilarities {
 	private:
-		std::vector<QImage> originals;
+		std::vector<ConstRgbaView> originals;
 		std::vector<RefImage> refs;
 		
 		
 		
 	public:
-		void addImage( QImage img );
-		Image getImagePart( int id, int ref );
+		void addImage( ConstRgbaView img );
+		//Image getImagePart( int id, int ref );
 		ImageSimMask getMask( int id, int ref );
 };
 

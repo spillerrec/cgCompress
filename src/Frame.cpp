@@ -18,13 +18,14 @@
 #include "Frame.hpp"
 
 /** \return The image this frame represent */
-Image Frame::reconstruct() const{
+RgbaImage Frame::reconstruct() const{
 	if( layers.size() == 0 )
-		return Image( QPoint(0,0), QImage() );
+		return {};
 	
-	Image image( primitives[layers[0]] );
+	RgbaImage image = copy( primitives[layers[0]].view() );
+	//TODO: check that base image is the largest?
 	for( size_t i=1; i<layers.size(); i++ )
-		image = image.combine( primitives[layers[i]] );
+		primitives[layers[i]].combine( image );
 	return image;
 }
 

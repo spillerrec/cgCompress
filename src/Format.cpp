@@ -73,6 +73,7 @@ QByteArray Format::to_byte_array( QImage img, bool keep_alpha ) const{
 QByteArray Format::to_byte_array( ConstRgbaView img, bool keep_alpha ) const{
 	QByteArray data;
 	QBuffer buffer( &data );
+	buffer.open( QIODevice::WriteOnly );
 	if( format.toLower() == "webp" )
 		if( get_quality() == 100 ){
 			FormatWebP::write( img, buffer, keep_alpha, 100 );
@@ -113,7 +114,7 @@ bool Format::save( ConstRgbaView img, QString path ) const{
  *  \param [in] p Precision of the estimation
  *  \return The estimated file size
  */
-int Format::file_size( QImage img, Precision p ) const{
+int Format::file_size( ConstRgbaView img, Precision p ) const{
 	if( precision_level > 0 && p != HIGH )
 		return FileSize::image_gradient_sum( img );
 	return to_byte_array( img ).size();

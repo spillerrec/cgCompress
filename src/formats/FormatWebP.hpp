@@ -28,6 +28,6 @@ namespace FormatWebP{
 	bool write( QImage image, QIODevice& device, bool keep_alpha=true, int quality=100 );
 	bool write( ConstRgbaView image, QIODevice& device, bool keep_alpha=true, int quality=100 );
 	bool writeLossy( QImage, QIODevice& device, int quality );
-	int estimate_filesize( QImage image, bool keep_alpha );
+	int estimate_filesize( ConstRgbaView image, bool keep_alpha );
 }
 

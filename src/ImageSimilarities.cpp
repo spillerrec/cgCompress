@@ -79,17 +79,17 @@ ImageSimMask RefImage::getMaskOf( uint16_t value ){
 	return mask;
 }
 
-static ImageSimMask createMask( QImage img1, QImage img2, ImageSimMask& mask ){
+static ImageSimMask createMask( ConstRgbaView img1, ConstRgbaView img2, ImageSimMask& mask ){
 	//The mask could be used to ignore already masked areas
-	assert( img1.size() == img2.size() );
-	assert( img1.size() == mask.size() );
+	//assert( img1.size() == img2.size() );
+	//assert( img1.size() == mask.size() );
 	
 	ImageSimMask new_mask = mask;
 	new_mask.fill( MASK_FALSE );
 	
 	for( int iy=0; iy<img1.height(); iy++ ){
-		auto row1 = (const QRgb*)img1.constScanLine( iy );
-		auto row2 = (const QRgb*)img2.constScanLine( iy );
+		auto row1 = img1[ iy ];
+		auto row2 = img2[ iy ];
 		auto row_old = mask.scanLine( iy );
 		auto row_new = new_mask.scanLine( iy );
 		
@@ -104,11 +104,11 @@ static ImageSimMask createMask( QImage img1, QImage img2, ImageSimMask& mask ){
 	return new_mask;
 }
 
-static QRgb makeTransparent( QRgb color )
-	{ return 0; }//qRgba( qRed( color ), qGreen( color ), qBlue( color ), 0 ); }
+static Rgba makeTransparent( QRgb color )
+	{ return {}; }//qRgba( qRed( color ), qGreen( color ), qBlue( color ), 0 ); }
 
 //TODO: Use 'Image' class to support transparency?
-Image ImageSimMask::apply( QImage image ) const{
+/*Image ImageSimMask::apply( QImage image ) const{
 	assert( image.size() == size() );
 	
 	for( int iy=0; iy<image.height(); iy++ ){
@@ -120,14 +120,14 @@ Image ImageSimMask::apply( QImage image ) const{
 	}
 	
 	return Image::fromTransparent( image );
-}
+}*/
 
 
-void ImageSimilarities::addImage( QImage img ){
+void ImageSimilarities::addImage( ConstRgbaView img ){
 	//TODO: All this should be optimized by ignoring large empty areas
 	
 	//The parts already covered by previous images
-	ImageSimMask already_masked( img.size() );
+	ImageSimMask already_masked( QSize{img.width(), img.height()} );
 	already_masked.fill( MASK_FALSE );
 	
 	//The indexes of other images sharing same pixels
@@ -151,5 +151,5 @@ ImageSimMask ImageSimilarities::getMask( int id, int ref ){
 	return refs[id].getMaskOf(ref);
 }
 
-Image ImageSimilarities::getImagePart( int id, int ref )
-	{ return getMask( id, ref ).apply( originals[id] ); }
+/*Image ImageSimilarities::getImagePart( int id, int ref )
+	{ return getMask( id, ref ).apply( originals[id] ); }*/

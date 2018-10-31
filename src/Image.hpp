@@ -51,13 +51,13 @@ class Image {
 	public:
 		/** \param [in] pos Offset of the image
 		 *  \param [in] img The image data */
-		Image( QPoint pos, QImage img );
+		Image( QPoint pos, ConstRgbaView img );
 		
 		/** \param [in] img QImage which will be converted to ARGB32 and positioned at {0,0} */
-		Image( QImage img ) : Image( {0,0}, img.convertToFormat(QImage::Format_ARGB32) ) { }
+		Image( ConstRgbaView img=ConstRgbaView() ) : Image( {0,0}, img ) { }
 		
-		/** \param [in] path Load the image at **path** on the file system */
-		Image( QString path ) : Image( QImage(path) ) { }
+		// /** \param [in] path Load the image at **path** on the file system */
+		//Image( QString path ) : Image( QImage(path) ) { }
 		
 		Image( const Image& other )
 			:	img(other.img), mask(copy(other.mask))
@@ -92,7 +92,7 @@ class Image {
 		QPoint get_pos() const{ return img.offset(); }
 		
 		/** \return The image data */
-		QImage qimg() const{ return img.get(); }
+		ConstRgbaView view() const{ return img.view(); }
 		
 		/** Save the image to the file system
 		 *  \param [in] path The location on the file system
@@ -105,8 +105,6 @@ class Image {
 		 *  \return The image in compressed form */
 		QByteArray to_byte_array( Format format, bool keep_alpha=true ) const
 			{ return saved_data.size() > 0 ? saved_data : format.to_byte_array( remove_transparent(), keep_alpha ); }
-		
-		Image resize( int size ) const;
 		
 		/** Create a clipped version of the image
 		 *  \param [in] x The amount to remove from the left
@@ -121,7 +119,7 @@ class Image {
 			return Image( img.copy( {x,y}, newSize ), std::move(newMask) );
 		}
 		
-		Image combine( Image on_top ) const;
+		void combine( RgbaView base ) const;
 		
 		Image contain_both( Image diff ) const;
 		//struct SplitImage split_shared( Image other ) const;
@@ -139,9 +137,8 @@ class Image {
 		int alpha_count() const;
 		
 		Image difference( Image img ) const;
-		Image remove_area( Image img ) const;
 		Image clean_alpha( int kernel_size, int threshold ) const;
-		QImage remove_transparent() const;
+		RgbaImage remove_transparent() const;
 		Image auto_crop() const;
 		
 		Image optimize_filesize( Format format ) const;
@@ -153,7 +150,7 @@ class Image {
 			{ return img == other.img && mask == other.mask; }
 		
 		bool mustKeepAlpha() const;
-		static Image fromTransparent( QImage img );
+		static Image fromTransparent( ConstRgbaView img );
 };
 
 /*

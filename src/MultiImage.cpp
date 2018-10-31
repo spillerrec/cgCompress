@@ -84,7 +84,7 @@ static void reuse_planes( QList<Image>& primitives, QList<Frame>& frames ){
 			Image result = primitives[i].contain_both( primitives[j] );
 			if( result.is_valid() ){
 				primitives[i] = result;
-				primitives[j] = Image( {0,0}, QImage() );
+				primitives[j] = { };
 				qDebug( "   Combining difference %d and %d", i, j );
 				
 				for( auto& frame : frames )
@@ -272,7 +272,7 @@ bool MultiImage::optimize2( QString name ) const{
 	ImageSimilarities similarities;
 	{	ProgressBar progress( "Finding similarities", originals.size() );
 		for( int i=0; i<originals.size(); i++ ){
-			similarities.addImage( originals[i].qimg() );
+			similarities.addImage( originals[i].view() );
 			progress.update();
 			//TODO: each call is not the same complexity!
 		}
@@ -291,7 +291,7 @@ bool MultiImage::optimize2( QString name ) const{
 	*/
 	
 	for( int i=0; i<originals.count(); i++ ){
-		ImageSimMask mask( originals[i].qimg().size() );
+		ImageSimMask mask( QSize{originals[i].view().width(), originals[i].view().height()} );
 		mask.fill( 0 );
 		
 		//*/
@@ -300,7 +300,7 @@ bool MultiImage::optimize2( QString name ) const{
 				.arg( QString::number(i), 3, QLatin1Char('0') )
 				.arg( QString::number(j), 3, QLatin1Char('0') )
 				;
-			similarities.getImagePart( i, j ).auto_crop().qimg().save( path );
+			//TODO: similarities.getImagePart( i, j ).auto_crop().qimg().save( path );
 		}
 		/*/
 		for( int j=0; j<originals.count(); j++ ){
@@ -393,7 +393,7 @@ bool MultiImage::validate( QString file ) const{
 		return false;
 	}
 	
-	OraHandler reader;
+	OraDecoder reader;
 	if( !reader.load( f ) ){
 		qDebug( "Image would not load for validation" );
 		return false;
@@ -407,8 +407,8 @@ bool MultiImage::validate( QString file ) const{
 	for( int i=0; i<reader.imageCount(); i++ ){
 		auto img = reader.read();
 		
-		auto img1 = toQImage(img)      .convertToFormat( QImage::Format_ARGB32 );
-		auto img2 = originals[i].qimg().convertToFormat( QImage::Format_ARGB32 );
+		auto img1 = toQImage(img                ).convertToFormat( QImage::Format_ARGB32 );
+		auto img2 = toQImage(originals[i].view()).convertToFormat( QImage::Format_ARGB32 );
 		
 		if( img1 != img2 ){
 			qDebug( "Error found at image %d!", i+1 );

@@ -19,6 +19,7 @@
 #define IMAGE_VIEW_HPP
 
 #include <cstring>
+#include <algorithm>
 
 template<typename T>
 class RowIt{
@@ -30,7 +31,7 @@ class RowIt{
 	public:
 		RowIt( T* data, int size, int stride )
 			:	data(data), size(size), stride(stride) {}
-			
+		
 		auto begin() const{ return data; }
 		auto end()   const{ return data+size; }
 		
@@ -76,11 +77,22 @@ class ImageViewBase{
 			
 		auto begin() const{ return (*this)[0]; }
 		auto end()   const{ return (*this)[h]; }
+		
+		bool operator==( ImageViewBase<T> other ) const{
+			if( w != other.w || h != other.h )
+				return false;
+			for( int iy=0; iy<h; iy++ )
+				if( !std::equal( other[iy].begin(), other[iy].end(), (*this)[iy].begin() ) )
+					return false;
+			return true;
+		}
 };
 
 template<typename T>
 class ConstImageView : public ImageViewBase<const T>{
 	public:
+		ConstImageView() : ImageViewBase<const T>( nullptr, 0, 0, 0) { }
+			
 		ConstImageView( const T* data, int width, int height, int stride )
 			:	ImageViewBase<const T>( data, width, height, stride) { }
 			
@@ -95,6 +107,8 @@ class ConstImageView : public ImageViewBase<const T>{
 template<typename T>
 class ImageView : public ImageViewBase<T>{
 	public:
+		ImageView() : ImageViewBase<const T>( nullptr, 0, 0, 0) { }
+			
 		ImageView( T* data, int width, int height, int stride )
 			:	ImageViewBase<T>( data, width, height, stride) { }
 			

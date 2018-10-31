@@ -18,7 +18,7 @@
 #ifndef FILE_SIZE_EVAL_HPP
 #define FILE_SIZE_EVAL_HPP
 
-#include <QImage>
+#include "images/Rgba.hpp"
 
 /**
 	Several methods to guess how much space a image will take to store compressed.
@@ -26,13 +26,13 @@
 */
 
 class SubQImage;
+class QImage;
 
 namespace FileSize{
 
-int simple_alpha( QImage mask, int transparent );
-int image_gradient_sum( QImage img );
+int image_gradient_sum( ConstRgbaView img );
 int image_gradient_sum( const SubQImage& img, QImage mask, int pixel_different );
-int lz4compress_size( QImage img );
+int lz4compress_size( ConstRgbaView img );
 
 }
 

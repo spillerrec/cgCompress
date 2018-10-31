@@ -18,25 +18,24 @@
 #ifndef SUB_QIMAGE_HPP
 #define SUB_QIMAGE_HPP
 
-#include <QImage>
+#include <QPoint>
+#include <QSize>
+#include "images/Rgba.hpp"
 
 
 /** Provides ReadOnly access to a region of a QImage without copying.
  *  row() and rowIndex() provides pixel access which is offset and casted correctly */
 class SubQImage{
 	private:
-		QImage img;
+		ConstRgbaView img;
 		QPoint pos;
 		QSize subsize;
 		
-		auto scanLine( int iy ) const
-			{ return img.constScanLine( iy + pos.y() ); }
-		
-		SubQImage( QImage img, QPoint pos, QSize subsize )
+		SubQImage( ConstRgbaView img, QPoint pos, QSize subsize )
 			:	img(img), pos(pos), subsize(subsize) {}
 	public:
-		SubQImage( QImage img, QPoint pos={0,0} )
-			:	img(img), pos(pos), subsize(img.size()) { }
+		SubQImage( ConstRgbaView img, QPoint pos={0,0} )
+			:	img(img), pos(pos), subsize(img.width(), img.height()) { }
 		
 		auto offset() const{ return pos; }
 		
@@ -44,11 +43,10 @@ class SubQImage{
 		auto width()  const{ return size().width();  }
 		auto height() const{ return size().height(); }
 		
-		auto rowIndex( int iy ) const{ return               scanLine( iy )  + pos.x(); }
-		auto row(      int iy ) const{ return (const QRgb*)(scanLine( iy )) + pos.x(); }
+		auto view() const
+			{ return img.crop( pos.x(), pos.y(), width(), height() ); }
 		
-		auto get() const
-			{ return img.copy( pos.x(), pos.y(), width(), height() ); }
+		auto operator[]( int iy ) const { return view()[iy]; }
 		
 		SubQImage copy( QPoint pos, QSize size ) const
 			{ return { img, offset() + pos, size }; }

@@ -177,7 +177,7 @@ int main( int argc, char* argv[] ){
 			
 			MultiImage multi_img( format );
 			for( auto& image : images )
-				multi_img.append( Image( toQImage( image.second ) ) );
+				multi_img.append( Image( image.second ) );
 			
 			optimizeImage( multi_img, name );
 		}
@@ -187,7 +187,7 @@ int main( int argc, char* argv[] ){
 		for( auto file : files )
 			for( auto& image : extract_files( file ) ){
 				apply_transformations( image.second );
-				multi_img.append( Image( toQImage( image.second ) ) );
+				multi_img.append( Image( image.second ) );
 			}
 		
 		optimizeImage( multi_img, QFileInfo(files[0]).completeBaseName() + name_extension );
@@ -208,16 +208,17 @@ int main( int argc, char* argv[] ){
 			qDebug() << "Compressing " << name;
 			MultiImage multi_img( format );
 			
-			QImage last;
+			std::vector<RgbaImage> images;
+			ConstRgbaView last;
 			for( int j=start; j<files.size(); j++ ){
-				QImage current = QImage( files[j] );
+				images.push_back( fromQImage( QImage( files[j] ) ) );
 				//TODO: apply_transformations
 				
-				if( options.contains( "--auto" ) && !last.isNull() && !isSimilar( current, last ) )
+				if( options.contains( "--auto" ) && last.valid() && !isSimilar( images.back(), last ) )
 					break;
 				
-				multi_img.append( Image( current ) );
-				last = current;
+				last = images.back();
+				multi_img.append( Image( last ) );
 			}
 			
 			optimizeImage( multi_img, name + name_extension );

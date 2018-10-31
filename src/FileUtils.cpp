@@ -44,13 +44,13 @@ std::vector<std::pair<QString,RgbaImage>> extract_files( QString filename ){
 	if( !f.open( QIODevice::ReadOnly ) )
 		return files;
 	
-	OraHandler handler;
-	if( !handler.load( f ) )
+	OraDecoder decoder;
+	if( !decoder.load( f ) )
 		return files;
 	
-	int image_count = handler.imageCount();
+	int image_count = decoder.imageCount();
 	for( int i=0; i<image_count; i++ ){
-		auto img = handler.read();
+		auto img = decoder.read();
 		//TODO: Check img
 		auto index = QString( "%1" ).arg( i, 4, 10, QChar{'0'} );
 		files.emplace_back( index, std::move(img) );
@@ -188,21 +188,21 @@ void pack_directory( QDir dir, QString name_extension ){
 	OraSaver::save( dir.dirName() + name_extension + ".cgcompress", mimetype, stack, files );
 }
 
-bool isSimilar( QImage img1, QImage img2 ){
-	if( img1.size() != img2.size() )
+bool isSimilar( ConstRgbaView img1, ConstRgbaView img2 ){
+	if( img1.width() != img2.width() || img1.height() != img2.height() )
 		return false;
 	
 	int count=0, total=0;
-	for( int iy=0; iy<img1.height(); iy++ )
-		for( int ix=0; ix<img1.width(); ix++ ){
-			auto pix1 = img1.pixel( ix, iy );
-			auto pix2 = img2.pixel( ix, iy );
-			if( qAlpha( pix1 ) != 0 || qAlpha( pix2 ) != 0 ){
+	for( int iy=0; iy<img1.height(); iy++ ){
+		auto row1 = img1[iy];
+		auto row2 = img2[iy];
+		for( int ix=0; ix<img1.width(); ix++ )
+			if( row1[ix].a != 0 || row2[ix].a != 0 ){
 				total++;
-				if( pix1 == pix2 )
+				if( row1[ix] == row2[ix] )
 					count++;
 			}
-		}
+	}
 	
 	if( total == 0 )
 		return false;

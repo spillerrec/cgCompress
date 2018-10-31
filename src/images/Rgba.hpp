@@ -30,8 +30,10 @@ struct Rgba{
 	Rgba( uint8_t r, uint8_t g, uint8_t b, uint8_t a )
 		: b(b), g(g), r(r), a(a) { }
 		
-	bool operator!=( Rgba other )
+	bool operator!=( Rgba other ) const
 		{ return r!=other.r || g!=other.g || b!=other.b || a!=other.a; }
+	bool operator==( Rgba other ) const
+		{ return !(*this != other); }
 };
 
 inline uint8_t mul8U( uint8_t left, uint8_t right ){

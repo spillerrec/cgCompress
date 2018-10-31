@@ -68,7 +68,7 @@ static QString next_file( archive* a ){
 	}
 }
 
-bool OraHandler::read_and_validate( archive *a ){
+bool OraDecoder::read_and_validate( archive *a ){
 	//Read and check mime
 	QString mime = next_file( a );
 	if( mime.isNull() ){
@@ -131,7 +131,7 @@ int stream_close( archive*, void *data ){
 	return ARCHIVE_OK;
 }
 
-bool OraHandler::load(QIODevice& device){
+bool OraDecoder::load(QIODevice& device){
 	loaded = true;
 	bool success = true;
 	archive* a = archive_read_new();
@@ -151,7 +151,7 @@ bool OraHandler::load(QIODevice& device){
 	return success;
 }
 
-static void alpha_replace( RgbaView output, ConstRgbaView image, int dx, int dy ){
+void OraDecoder::alpha_replace( RgbaView output, ConstRgbaView image, int dx, int dy ){
 	auto new_width  = std::min(image.width() , output.width()-dx);
 	auto new_height = std::min(image.height(), output.width()-dy);
 	//TODO: Warning if inconsistent?
@@ -159,14 +159,14 @@ static void alpha_replace( RgbaView output, ConstRgbaView image, int dx, int dy 
 	Blending::BlendImages<Rgba>( crop, image.crop(0,0,new_width,new_height), Blending::alphaReplace );
 }
 
-static void src_over( RgbaView output, ConstRgbaView image, int dx, int dy ){
+void OraDecoder::src_over( RgbaView output, ConstRgbaView image, int dx, int dy ){
 	auto new_width  = std::min(image.width() , output.width()-dx);
 	auto new_height = std::min(image.height(), output.width()-dy);
 	auto crop = output.crop( dx, dy, new_width, new_height );
 	Blending::BlendImages<Rgba>( crop, image.crop(0,0,new_width,new_height), Blending::srcOverRgba );
 }
 
-void OraHandler::render_stack( xml_node node, RgbaImage &output, int offset_x, int offset_y ) const{
+void OraDecoder::render_stack( xml_node node, RgbaImage &output, int offset_x, int offset_y ) const{
 	for( xml_node_iterator it = --node.end(); it != --node.begin(); it-- ){
 		std::string name( (*it).name() );
 		if( name == "stack" ){
@@ -208,7 +208,7 @@ void OraHandler::render_stack( xml_node node, RgbaImage &output, int offset_x, i
 	}
 }
 
-RgbaImage OraHandler::read(){
+RgbaImage OraDecoder::read(){
 	frame++;
 	
 	if( !loaded )
@@ -233,13 +233,13 @@ RgbaImage OraHandler::read(){
 	return output;
 }
 
-int OraHandler::imageCount() const{
+int OraDecoder::imageCount() const{
 	//Counts the amount of "stack" elements in "image"
 	auto frames = doc.child( "image" ).children( "stack" );
 	return std::distance( frames.begin(), frames.end() );
 }
 /*
-int OraHandler::nextImageDelay() const{
+int OraDecoder::nextImageDelay() const{
 	int wanted = frame + 1 >= imageCount() ? 0 : frame + 1;
 	
 	//Iterate to the node we want

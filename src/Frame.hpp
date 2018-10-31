@@ -36,7 +36,7 @@ class Frame {
 		Frame( std::vector<Image> primitives, std::vector<int> layers )
 			: primitives( std::move(primitives) ), layers( std::move(layers) ) { }
 		
-		Image reconstruct() const;
+		RgbaImage reconstruct() const;
 		
 		void update_ids( int from, std::vector<int> to );
 		

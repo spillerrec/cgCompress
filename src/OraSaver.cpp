@@ -117,9 +117,9 @@ void OraSaver::save( QString path, Format format ) const{
 	QList<std::pair<QString,QByteArray>> files;
 	
 	// Thumbnail
-	Image thumb = first_frame.resize( 256 );
+	QImage thumb = toQImage(first_frame).scaled( 256, 256, Qt::KeepAspectRatio, Qt::SmoothTransformation );;
 	Format lossy = format.get_lossy();
-	files.append( { lossy.filename("Thumbnails/thumbnail"), thumb.to_byte_array( lossy ) } );
+	files.append( { lossy.filename("Thumbnails/thumbnail"), lossy.to_byte_array( thumb ) } );
 	
 	//Find used primitives
 	QList<int> used;
@@ -139,7 +139,7 @@ void OraSaver::save( QString path, Format format ) const{
 	
 	//Create stack
 	QString stack( "<?xml version='1.0' encoding='UTF-8'?>\n" );
-	stack += QString( "<image w=\"%1\" h=\"%2\">" ).arg( first_frame.qimg().width() ).arg( first_frame.qimg().height() );
+	stack += QString( "<image w=\"%1\" h=\"%2\">" ).arg( first_frame.width() ).arg( first_frame.height() );
 	
 	for( auto frame : frames ){
 		stack += "<stack>";

@@ -34,7 +34,7 @@ void evaluate_cgcompress( QStringList files );
 
 void pack_directory( QDir dir, QString name_extension );
 
-bool isSimilar( QImage img1, QImage img2 );
+bool isSimilar( ConstRgbaView img1, ConstRgbaView img2 );
 
 QStringList expandFolders( QStringList files );
 

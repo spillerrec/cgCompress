@@ -18,6 +18,7 @@
 #include "Image.hpp"
 #include "FileSizeEval.hpp"
 #include "formats/FormatWebP.hpp"
+#include "decoder/OraHandler.hpp"
 
 #include <cmath>
 
@@ -28,8 +29,8 @@ using namespace std;
 
 //static int guid = 0; //For saving debug images
 
-const auto TRANS_SET = qRgba( 255, 0, 255, 0 );
-const auto TRANS_NONE = qRgba( 0, 0, 0, 0 );
+const auto TRANS_SET = Rgba( 255, 0, 255, 0 );
+const auto TRANS_NONE = Rgba( 0, 0, 0, 0 );
 
 const auto PIXEL_DIFFERENT = 0; //Pixel do not match with other image
 const auto PIXEL_MATCH = 1;     //Pixel is the same as other image
@@ -41,19 +42,9 @@ static ImageMask make_mask( QSize size ){
 	return mask;
 }
 
-Image::Image( QPoint pos, QImage img )
-	:	img(img.convertToFormat(QImage::Format_ARGB32), pos), mask(make_mask(img.size()))
+Image::Image( QPoint pos, ConstRgbaView img )
+	:	img(img, pos), mask(make_mask({img.width(), img.height()})) //TODO: avoid mask?
 {
-}
-
-/** Create a resized version of this image, will keep aspect ratio
- *  \param [in] size Maximum dimensions of the resized image
- *  \return The resized image */
-Image Image::resize( int size ) const{
-	size = min( size, img.width() );
-	size = min( size, img.height() );
-	QImage scaled = qimg().scaled( size, size, Qt::KeepAspectRatio, Qt::SmoothTransformation );
-	return Image( {0,0}, scaled );
 }
 
 static bool content_in_vertical_line( QImage img, int x ){
@@ -98,23 +89,6 @@ QList<Image> Image::segment() const{
 }
 */
 
-/** Make the area the other image covers transparent (colors are kept).
- *  \param [in] input The area to remove
- *  \return The resulting image */
-Image Image::remove_area( Image input ) const{
-	//TODO: Only affect the mask?
-	QImage output( qimg().convertToFormat(QImage::Format_ARGB32) );
-	
-	//TODO: This is wrong, it should be the difference!
-	for( int iy=input.get_pos().y(); iy<input.get_pos().y()+input.img.height(); iy++ ){
-		QRgb* out = (QRgb*)output.scanLine( iy );
-		for( int ix=input.get_pos().x(); ix<input.get_pos().x()+input.img.width(); ix++ )
-			out[ix] = qRgba( qRed(out[ix]),qGreen(out[ix]),qBlue(out[ix]),0 );
-	}
-			
-	return Image( get_pos(), output );
-}
-
 /** Segment based on how the images differs.
  *  \todo explain this better
  *  \param [in] diff The image used for differencing
@@ -123,6 +97,11 @@ Image Image::remove_area( Image input ) const{
 QList<Image> Image::diff_segment( Image diff ) const{
 	if( !overlaps( diff ) )
 		return QList<Image>() << *this << diff;
+	
+//remove_area removed, description below:
+//	Make the area the other image covers transparent (colors are kept).
+ // \param [in] input The area to remove
+ // \return The resulting image
 	
 	Image diff_diff = difference( diff );
 	Image diff_diff2 = diff.difference( *this );
@@ -147,21 +126,11 @@ QList<Image> Image::diff_segment( Image diff ) const{
 }
 */
 
-/** Paint another image on top of this one
- *  \param [in] on_top Image to paint
+/** Paint this image onto 'base'
+ *  \param [in] base The image to blend this image onto
  *  \return The combined image */
-Image Image::combine( Image on_top ) const{
-	QPoint tl{ min( get_pos().x(), on_top.get_pos().x() ), min( get_pos().y(), on_top.get_pos().y() ) };
-	int width  = max( get_pos().x()+img.width(),  on_top.get_pos().x()+on_top.img.width() )  - tl.x();
-	int height = max( get_pos().y()+img.height(), on_top.get_pos().y()+on_top.img.height() ) - tl.y();
-	
-	QImage output( width, height, QImage::Format_ARGB32 );
-	output.fill( 0 );
-	QPainter painter( &output ); //TODO: support cgcompress:alpha-replace
-	painter.drawImage(        get_pos()-tl,        remove_transparent() );
-	painter.drawImage( on_top.get_pos()-tl, on_top.remove_transparent() );
-	
-	return Image( tl, output ); //TODO:
+void Image::combine( RgbaView base ) const{
+	OraDecoder::src_over( base, view(), get_pos().x(), get_pos().y() );
 }
 
 /** The difference between the two images
@@ -174,8 +143,8 @@ Image Image::difference( Image input ) const{
 	auto w = img.width();
 	auto mask = make_mask( img.size() );
 	for( int iy=0; iy<img.height(); iy++ ){
-		auto out      =       img.row( iy );
-		auto in       = input.img.row( iy );
+		auto out      =       img[iy];
+		auto in       = input.img[iy];
 		auto out_mask = mask[ iy ];
 		for( int ix=0; ix<w; ix++ )
 			out_mask[ix] = (in[ix] == out[ix]) ? DiffType::MATCHES : DiffType::DIFFERS;
@@ -197,8 +166,8 @@ Image Image::contain_both( Image input ) const{
 	ImageMask mask_output = copy( mask );
 	
 	for( int iy=0; iy<mask.height(); iy++ ){
-		auto in1 =       img.row( iy );
-		auto in2 = input.img.row( iy );
+		auto in1 =       img[iy];
+		auto in2 = input.img[iy];
 		
 		auto mask1    =       mask [iy];
 		auto mask2    = input.mask [iy];
@@ -341,16 +310,16 @@ Image Image::clean_alpha( int kernel_size, int threshold ) const{
 }
 
 /** \return This image where all transparent pixels are set to transparent black **/
-QImage Image::remove_transparent() const{
-	if( !mask.valid() )
-		return qimg(); //Nothing is transparent
-	
-	QImage output( qimg() );
+RgbaImage Image::remove_transparent() const{
+	RgbaImage output = copy( view() );
 	int width = output.width(), height = output.height();
 	
+	if( !mask.valid() )
+		return output; //Nothing is transparent
+	
 	for( int iy=0; iy<height; iy++ ){
-		auto out = (QRgb*)output.scanLine( iy );
-		auto out_mask = mask[iy];
+		auto out      = output[iy];
+		auto out_mask = mask  [iy];
 			
 		for( int ix=0; ix<width; ix++ )
 			if( out_mask[ix] != DiffType::DIFFERS )
@@ -380,7 +349,7 @@ struct ContentMap{
 /** \return This image, but with image data cropped to only contain non-transparent areas */
 Image Image::auto_crop() const{
 	if( !mask.valid() )
-		return Image( qimg() );
+		return Image( view() );
 	
 	//Build up lookup for horizontal and vertical lines
 	ContentMap map( mask );
@@ -470,31 +439,23 @@ int Image::alpha_count() const{
 }
 
 bool Image::mustKeepAlpha() const{
-	auto img = qimg();
-	int width = img.width(), height = img.height();
-	
-	for( int iy=0; iy<height; iy++ ){
-		auto out = (const QRgb*)img.constScanLine( iy );
-			
-		for( int ix=0; ix<width; ix++ ){
-			auto pixel = out[ix];
-			if( (qAlpha(pixel) != 255) && (pixel != TRANS_SET) )
+	for( auto row : view() )
+		for( auto pixel : row )
+			if( (pixel.a != 255) && pixel != TRANS_SET )
 				return true;
-		}
-	}
 	
 	return false;
 }
 
 
-Image Image::fromTransparent( QImage img ){
-	auto mask = make_mask( img.size() );
+Image Image::fromTransparent( ConstRgbaView img ){
+	auto mask = make_mask( { img.width(), img.height() } );
 	
 	for( int iy=0; iy<img.height(); iy++ ){
 		auto out = mask[iy];
-		auto in = (const QRgb*)img.constScanLine( iy );
+		auto in  = img[iy];
 		for( int ix=0; ix<img.width(); ix++ )
-			out[ix] = (qAlpha(in[ix]) != 0) ? DiffType::DIFFERS : DiffType::MATCHES;
+			out[ix] = (in[ix].a != 0) ? DiffType::DIFFERS : DiffType::MATCHES;
 	}
 	
 	return Image( img ).newMask( mask );

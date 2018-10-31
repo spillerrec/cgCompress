@@ -15,8 +15,8 @@
 	along with qt5-ora-plugin.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef ORA_HANDLER_HPP
-#define ORA_HANDLER_HPP
+#ifndef ORA_DECODER_HPP
+#define ORA_DECODER_HPP
 
 #include <map>
 
@@ -28,7 +28,7 @@
 
 #include "../images/Rgba.hpp"
 
-class OraHandler{
+class OraDecoder{
 	private:
 		int frame{ -1 };
 		bool loaded{ false };
@@ -47,6 +47,10 @@ class OraHandler{
 		RgbaImage read();
 		
 		int imageCount() const;
+		
+		
+		static void alpha_replace( RgbaView output, ConstRgbaView image, int dx, int dy );
+		static void src_over(      RgbaView output, ConstRgbaView image, int dx, int dy );
 		
 };
 

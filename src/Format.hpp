@@ -92,7 +92,7 @@ class Format {
 			,	MEDIUM
 			,	LOW
 		};
-		int file_size( QImage img, Precision p=HIGH ) const;
+		int file_size( ConstRgbaView img, Precision p=HIGH ) const;
 
 		/** \return The file extension */
 		const char* ext() const{ return format.constData(); }

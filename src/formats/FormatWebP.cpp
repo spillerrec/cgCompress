@@ -207,7 +207,7 @@ bool FormatWebP::writeLossy( QImage image, QIODevice& device, int quality ){
 }
 
 
-int FormatWebP::estimate_filesize( QImage image, bool keep_alpha ){
+int FormatWebP::estimate_filesize( ConstRgbaView image, bool keep_alpha ){
 	Compressor webp;
 	if( !webp.init( image ) )
 		return false;
