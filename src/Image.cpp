@@ -159,8 +159,8 @@ Image Image::difference( Image input ) const{
  *  \return An image which contains both images, or an invalid image on failure */
 Image Image::contain_both( Image input ) const{
 	//TODO: images must be the same size and at same point
-	if( mask.valid() || !input.is_valid() )
-		return Image( {0,0}, {} );
+	if( !mask.valid() || !input.is_valid() )
+		return {};
 	//TODO: Check the behaviour of this
 	
 	ImageMask mask_output = copy( mask );
@@ -180,8 +180,8 @@ Image Image::contain_both( Image input ) const{
 			
 			if( in1[ix] != in2[ix] ){
 				//Pixel cannot be shared
-				if( pix1 == DiffType::DIFFERS || pix1 == DiffType::DIFFERS )
-					return Image( {0,0}, {} );
+				if( pix1 == DiffType::DIFFERS || pix2 == DiffType::DIFFERS )
+					return {};
 				
 				out = DiffType::SHARED;
 			}
@@ -193,7 +193,7 @@ Image Image::contain_both( Image input ) const{
 				else if( pix2 == DiffType::MATCHES ) //Other is the more specific
 					out = pix1;
 				else //One is shared, other is set, not allowed
-					return Image( {0,0}, {} );
+					return {};
 			}
 		}
 	}
@@ -207,7 +207,7 @@ Image Image::contain_both( Image input ) const{
 }
 
 
-SplitImage Image::split_shared( Image input ) const{
+SplitImage Image::split_shared( const Image& input ) const{
 	//TODO: images must be the same size and at same point
 	if( !mask.valid() || !input.mask.valid() )
 		return {};
@@ -224,9 +224,12 @@ SplitImage Image::split_shared( Image input ) const{
 		auto mask_out = mask_shared[iy];
 		
 		for( int ix=0; ix<mask.width(); ix++ ){
+			//If both images contains this pixel
 			auto mask_match = (mask1[ix] == mask2[ix]) && (mask2[ix] == DiffType::DIFFERS);
+			//And pixels are the same
 			auto pixels_match = in1[ix] == in2[ix];
 			
+			//Then transfer it to the shared mask
 			mask_out[ix] = ( mask_match && pixels_match ) ? DiffType::DIFFERS : DiffType::SHARED;
 		}
 	}
@@ -245,10 +248,14 @@ SplitImage Image::split_shared( Image input ) const{
 		};
 	
 	SplitImage result;
+	result.shared = Image( this->img, copy(mask_shared) );
 	result.first  = Image( this->img, cut_mask( this->mask, mask_shared ) );
 	result.second = Image( input.img, cut_mask( input.mask, mask_shared ) );
-	result.shared = Image( this->img, copy(mask_shared) );
 	result.usefulness = -1;
+	
+	//if( result.shared.auto_crop().is_valid())
+	//	if(!result.first.auto_crop().is_valid() || !result.second.auto_crop().is_valid())
+	//		qFatal("Invalid split for images");
 	
 	return result;
 }

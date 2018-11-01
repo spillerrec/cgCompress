@@ -109,7 +109,7 @@ class Image {
 		void combine( RgbaView base ) const;
 		
 		Image contain_both( Image diff ) const;
-		struct SplitImage split_shared( Image other ) const;
+		struct SplitImage split_shared( const Image& other ) const;
 		
 		/** Calculates file size of the image; wrapper for Format::file_size()
 		 *  \param [in] format Format used for compression

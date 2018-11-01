@@ -114,7 +114,7 @@ static void reuse_planes2( std::vector<Image>& primitives, std::vector<Frame>& f
 			
 			auto split = primitives[i].split_shared( primitives[j] );
 			split.index = j;
-			if( split.shared.auto_crop().is_valid() )
+			if( split.shared.auto_crop().is_valid() && split.first.auto_crop().is_valid() && split.second.auto_crop().is_valid() )
 				splits << split;
 		}
 		
