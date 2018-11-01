@@ -72,12 +72,12 @@ Converter createConverter( const ConverterPara& p ){
 	return Converter( p.parent->originals, p.i, p.j, p.parent->format );
 }
 
-static void reuse_planes( QList<Image>& primitives, QList<Frame>& frames ){
+static void reuse_planes( std::vector<Image>& primitives, std::vector<Frame>& frames ){
 	// Try to reuse planes if possible
-	for( int i=0; i<primitives.size(); i++ ){
+	for( unsigned i=0; i<primitives.size(); i++ ){
 		if( !primitives[i].is_valid() )
 			continue;
-		for( int j=i+1; j<primitives.size(); j++ ){
+		for( unsigned j=i+1; j<primitives.size(); j++ ){
 			if( !primitives[j].is_valid() )
 				continue;
 			
@@ -96,16 +96,16 @@ static void reuse_planes( QList<Image>& primitives, QList<Frame>& frames ){
 	}
 }
 
-static void reuse_planes2( QList<Image>& primitives, QList<Frame>& frames, Format format ){
+static void reuse_planes2( std::vector<Image>& primitives, std::vector<Frame>& frames, Format format ){
 	reuse_planes( primitives, frames );
 	
 	int amount_saved = 0;
 	
-	for( int i=0; i<primitives.size(); i++ ){
+	for( unsigned i=0; i<primitives.size(); i++ ){
 		if( !primitives[i].is_valid() )
 			continue;
 		
-		/* TODO
+		
 		//Try all possible combinations with later primitives, but only save those which can be shared
 		QList<SplitImage> splits;
 		for( int j=i+1; j<primitives.size(); j++ ){
@@ -117,7 +117,6 @@ static void reuse_planes2( QList<Image>& primitives, QList<Frame>& frames, Forma
 			if( split.shared.auto_crop().is_valid() )
 				splits << split;
 		}
-		
 		
 		if( splits.size() > 0 ){
 			auto size_estim = [&](auto& img){ return img.auto_crop().compressed_size( format, Format::MEDIUM ); };
@@ -132,7 +131,6 @@ static void reuse_planes2( QList<Image>& primitives, QList<Frame>& frames, Forma
 				auto old_size = prim_i_size + size_estim( primitives[split.index] );
 				split.usefulness = old_size - new_size;
 			}
-			
 			//Pick the best one
 			auto best = std::max_element( splits.begin(), splits.end(), [](auto&a,auto&b){ return a.usefulness < b.usefulness; } );
 			if( best != splits.end() ){
@@ -147,12 +145,12 @@ static void reuse_planes2( QList<Image>& primitives, QList<Frame>& frames, Forma
 					amount_saved += size_saved;
 				
 					//Change the primitives
-					primitives[i          ] = Image( {}, {} );
-					primitives[best->index] = Image( {}, {} );
+					primitives[i          ] = {};
+					primitives[best->index] = {};
 					auto start_pos = primitives.size();
-					primitives << best->shared;
-					primitives << best->first;
-					primitives << best->second;
+					primitives.push_back( best->shared );
+					primitives.push_back( best->first  );
+					primitives.push_back( best->second );
 					if( !best->shared.is_valid() || !best->first.is_valid() || !best->second.is_valid() )
 						qFatal( "Not all splitted images are valid" );
 					//TODO: Handle those cases
@@ -166,11 +164,10 @@ static void reuse_planes2( QList<Image>& primitives, QList<Frame>& frames, Forma
 					qDebug( "   Extracting shared parts of difference %d and %d, to {%d,%d} and {%d,%d}, saving %d bytes", i, best->index, start_pos+1, start_pos+0,start_pos+2,start_pos+0, size_saved );
 				}
 			}
-			
-		}*/
+		}
 	}
 	
-	//qDebug( "   Extracting saved %d bytes", amount_saved );
+	qDebug( "   Extracting saved %d bytes", amount_saved );
 }
 
 /** Create an efficient composite version and save it to a cgCompress file.
@@ -246,8 +243,8 @@ bool MultiImage::optimize( QString name ) const{
 		}
 	}
 	
-	qDebug( "\nRevaluating differences (%d+)", final_primitives.size() );
-	//reuse_planes2( final_primitives, final_frames, format ); //TODO:
+	qDebug( "\nRevaluating differences (%lu+)", final_primitives.size() );
+	reuse_planes2( final_primitives, final_frames, format );
 	
 	auto future2 = QtConcurrent::map( final_primitives, [&]( auto& img ){ img = img.optimize_filesize( format ); } );
 	ProgressBar::showFuture( "Optimizing final images", future2 );

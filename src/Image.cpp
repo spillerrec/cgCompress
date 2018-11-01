@@ -47,24 +47,24 @@ Image::Image( QPoint pos, ConstRgbaView img )
 {
 }
 
-static bool content_in_vertical_line( QImage img, int x ){
+static bool content_in_vertical_line( ConstRgbaView img, int x ){
 	for( int iy=0; iy<img.height(); iy++ )
-		if( qAlpha( img.pixel(x,iy) ) != 0 )
+		if( img[iy][x].a != 0 )
 			return true;
 	return false;
 }
 
+//TODO: Unused?
 /** Segment the image into several separate images, based on the alpha channel
  *  \return List of images which can be combined to into this image */
-/*
 QList<Image> Image::segment() const{
 	QList<Image> images;
 	
 	//Check vertical lines
-	bool content = content_in_vertical_line( img, 0 );
+	bool content = content_in_vertical_line( img.view(), 0 );
 	int first_line = 0;
 	for( int ix=1; ix<img.width(); ix++ ){
-		bool cur_content = content_in_vertical_line( img, ix );
+		bool cur_content = content_in_vertical_line( img.view(), ix );
 		if( content == cur_content )
 			continue;
 		
@@ -87,7 +87,7 @@ QList<Image> Image::segment() const{
 	
 	return images;
 }
-*/
+
 
 /** Segment based on how the images differs.
  *  \todo explain this better
@@ -206,51 +206,52 @@ Image Image::contain_both( Image input ) const{
 	return newMask( mask_output );
 }
 
-/*
-SplitImage Image::split_shared( Image input ) const{ //TODO:
+
+SplitImage Image::split_shared( Image input ) const{
 	//TODO: images must be the same size and at same point
-	if( mask.isNull() ||input.mask.isNull() )
+	if( !mask.valid() || !input.mask.valid() )
 		return {};
 	
 	
 	//Find the shared area of the two images
-	QImage mask_shared( mask );
+	ImageMask mask_shared = copy( mask );
 	for( int iy=0; iy<mask.height(); iy++ ){
-		auto in1 =       img.row( iy );
-		auto in2 = input.img.row( iy );
+		auto in1 =       img[iy];
+		auto in2 = input.img[iy];
 		
-		auto mask1 =       mask.constScanLine( iy );
-		auto mask2 = input.mask.constScanLine( iy );
-		auto mask_out = mask_shared.scanLine( iy );
+		auto mask1 =       mask[iy];
+		auto mask2 = input.mask[iy];
+		auto mask_out = mask_shared[iy];
 		
 		for( int ix=0; ix<mask.width(); ix++ ){
-			auto mask_match = (mask1[ix] == mask2[ix]) && (mask2[ix] == PIXEL_DIFFERENT);
+			auto mask_match = (mask1[ix] == mask2[ix]) && (mask2[ix] == DiffType::DIFFERS);
 			auto pixels_match = in1[ix] == in2[ix];
 			
-			mask_out[ix] = ( mask_match && pixels_match ) ? PIXEL_DIFFERENT : PIXEL_SHARED;
+			mask_out[ix] = ( mask_match && pixels_match ) ? DiffType::DIFFERS : DiffType::SHARED;
 		}
 	}
 	
 	//Function for removing the shared areas of the masks
-	auto cut_mask = []( QImage mask, QImage cut ){
+	auto cut_mask = []( ConstImageView<DiffType> mask, ConstImageView<DiffType> cut ){
+			auto out = copy( mask );
 			for( int iy=0; iy<mask.height(); iy++ ){
-				auto r_out = mask.     scanLine( iy );
-				auto r_cut = cut .constScanLine( iy );
+				auto r_out = out[iy];
+				auto r_cut = cut[iy];
 				
 				for( int ix=0; ix<mask.width(); ix++ )
-					r_out[ix] = (r_cut[ix] == PIXEL_DIFFERENT) ? PIXEL_SHARED : r_out[ix];
+					r_out[ix] = (r_cut[ix] == DiffType::DIFFERS) ? DiffType::SHARED : r_out[ix];
 			}
-			return mask;
+			return out;
 		};
 	
 	SplitImage result;
-	result.shared = Image( this->img, mask_shared );
 	result.first  = Image( this->img, cut_mask( this->mask, mask_shared ) );
 	result.second = Image( input.img, cut_mask( input.mask, mask_shared ) );
+	result.shared = Image( this->img, copy(mask_shared) );
 	result.usefulness = -1;
 	
 	return result;
-}*/
+}
 
 /** Dilate the alpha channel to reduce salt&pepper noise
  *  \param [in] kernel_size How large area around each pixel should be considered

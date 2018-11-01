@@ -97,6 +97,8 @@ bool Format::save( ConstRgbaView img, QString path ) const{
  *  \return The estimated file size
  */
 int Format::file_size( ConstRgbaView img, Precision p ) const{
+	if( !img.valid() )
+		return 0;
 	if( precision_level > 0 && p != HIGH )
 		return FileSize::image_gradient_sum( img );
 	return to_byte_array( img ).size();

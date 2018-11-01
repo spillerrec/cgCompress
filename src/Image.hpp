@@ -61,9 +61,9 @@ class Image {
 	private:
 		Image( SubImage img, ImageMask mask ) : img(img), mask(std::move(mask)) { }
 		Image newMask( ConstImageView<DiffType> mask ) const{ return Image( img, copy(mask) ); }
-		/*
+		
 		QList<Image> segment() const;
-		QList<Image> diff_segment( Image diff ) const;*/
+		/*QList<Image> diff_segment( Image diff ) const;*/
 		/** \return true if *this* overlaps *other* */
 		/*bool overlaps( Image other ) const{
 			return QRect( pos, size ).intersects( QRect( other.pos, other.size ) );
@@ -109,7 +109,7 @@ class Image {
 		void combine( RgbaView base ) const;
 		
 		Image contain_both( Image diff ) const;
-		//struct SplitImage split_shared( Image other ) const;
+		struct SplitImage split_shared( Image other ) const;
 		
 		/** Calculates file size of the image; wrapper for Format::file_size()
 		 *  \param [in] format Format used for compression
@@ -140,7 +140,6 @@ class Image {
 		static Image fromTransparent( ConstRgbaView img );
 };
 
-/*
 struct SplitImage{
 	Image shared;
 	Image first;
@@ -149,6 +148,6 @@ struct SplitImage{
 	int index{ -1 };
 	SplitImage() : shared( {0,0}, {} ), first(shared), second(shared) {}
 };
-*/
+
 #endif
 
