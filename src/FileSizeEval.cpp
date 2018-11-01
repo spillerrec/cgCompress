@@ -19,6 +19,8 @@
 #include "SubImage.hpp"
 #include "Compression.hpp"
 
+#include <vector>
+
 
 static int compressed_lz4_size( const std::vector<uint8_t>& data ){
 	return FileSize::lz4compress_size( data.data(), data.size() );

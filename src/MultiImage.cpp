@@ -74,10 +74,10 @@ Converter createConverter( const ConverterPara& p ){
 
 static void reuse_planes( std::vector<Image>& primitives, std::vector<Frame>& frames ){
 	// Try to reuse planes if possible
-	for( unsigned i=0; i<primitives.size(); i++ ){
+	for( size_t i=0; i<primitives.size(); i++ ){
 		if( !primitives[i].is_valid() )
 			continue;
-		for( unsigned j=i+1; j<primitives.size(); j++ ){
+		for( size_t j=i+1; j<primitives.size(); j++ ){
 			if( !primitives[j].is_valid() )
 				continue;
 			
@@ -85,11 +85,11 @@ static void reuse_planes( std::vector<Image>& primitives, std::vector<Frame>& fr
 			if( result.is_valid() ){
 				primitives[i] = result;
 				primitives[j] = { };
-				qDebug( "   Combining difference %d and %d", i, j );
+				qDebug( "   Combining difference %lu and %lu", i, j );
 				
 				for( auto& frame : frames )
 					for( auto& layer : frame.layers )
-						if( layer == j )
+						if( layer == (int)j )
 							layer = i;
 			}
 		}
@@ -108,7 +108,7 @@ static void reuse_planes2( std::vector<Image>& primitives, std::vector<Frame>& f
 		
 		//Try all possible combinations with later primitives, but only save those which can be shared
 		QList<SplitImage> splits;
-		for( int j=i+1; j<primitives.size(); j++ ){
+		for( size_t j=i+1; j<primitives.size(); j++ ){
 			if( !primitives[j].is_valid() )
 				continue;
 			
@@ -157,11 +157,11 @@ static void reuse_planes2( std::vector<Image>& primitives, std::vector<Frame>& f
 					
 					//Update the frames with the new primitives
 					for( auto& frame : frames ){
-						frame.update_ids( i,           {start_pos+1, start_pos+0} );
-						frame.update_ids( best->index, {start_pos+2, start_pos+0} );
+						frame.update_ids( i,           {int(start_pos+1), int(start_pos+0)} );
+						frame.update_ids( best->index, {int(start_pos+2), int(start_pos+0)} );
 						frame.primitives = primitives;
 					}
-					qDebug( "   Extracting shared parts of difference %d and %d, to {%d,%d} and {%d,%d}, saving %d bytes", i, best->index, start_pos+1, start_pos+0,start_pos+2,start_pos+0, size_saved );
+					qDebug( "   Extracting shared parts of difference %u and %d, to {%lu,%lu} and {%lu,%lu}, saving %d bytes", i, best->index, start_pos+1, start_pos+0,start_pos+2,start_pos+0, size_saved );
 				}
 			}
 		}
