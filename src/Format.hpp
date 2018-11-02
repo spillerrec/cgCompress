@@ -18,7 +18,6 @@
 #ifndef FORMAT_HPP
 #define FORMAT_HPP
 
-#include <QImage>
 #include <QString>
 #include <QByteArray>
 #include "images/Rgba.hpp"
@@ -29,6 +28,9 @@ class Format {
 		QByteArray format{ "png" }; ///file extension compatible with Qt format
 		int quality{ 100 }; ///Compression quality when saving
 		int precision_level{ 0 };
+		
+	public:
+		static RgbaImage read( QString path ); //TODO: Extension?
 		
 	public:
 		/** Everything set to default values */
@@ -80,10 +82,8 @@ class Format {
 		 *  \param [in] path File system path, without extension
 		 *  \return true on success
 		 */
-		 bool save( QImage img, QString path ) const;
-		 bool save( ConstRgbaView img, QString path ) const;
+		bool save( ConstRgbaView img, QString path ) const;
 		
-		QByteArray to_byte_array( QImage img, bool keep_alpha = true ) const;
 		QByteArray to_byte_array( ConstRgbaView img, bool keep_alpha = true ) const;
 		
 		/** The precision when calculating the file size */

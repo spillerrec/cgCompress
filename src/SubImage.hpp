@@ -15,16 +15,16 @@
 	along with cgCompress.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SUB_QIMAGE_HPP
-#define SUB_QIMAGE_HPP
+#ifndef SUB_IMAGE_HPP
+#define SUB_IMAGE_HPP
 
 #include <QPoint>
 #include <QSize>
 #include "images/Rgba.hpp"
 
 
-/** Provides ReadOnly access to a region of a QImage without copying.
- *  row() and rowIndex() provides pixel access which is offset and casted correctly */
+/** Provides ReadOnly access to a region of a RgbaImage without copying.
+ *  view() provides pixel access which is offset and sized correctly */
 class SubImage{
 	private:
 		ConstRgbaView img;

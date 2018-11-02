@@ -43,7 +43,7 @@ class Image {
 		 *  \param [in] img The image data */
 		Image( QPoint pos, ConstRgbaView img );
 		
-		/** \param [in] img QImage which will be converted to ARGB32 and positioned at {0,0} */
+		/** \param [in] img IImage which will be copied and positioned at {0,0} */
 		Image( ConstRgbaView img=ConstRgbaView() ) : Image( {0,0}, img ) { }
 		
 		Image( const Image& other )

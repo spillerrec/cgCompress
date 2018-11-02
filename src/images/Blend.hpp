@@ -51,6 +51,22 @@ inline Rgba alphaReplace( Rgba bottom, Rgba top ){
 	return ( top != Rgba(255,0,255,0) ) ? top : bottom;
 }
 
+
+constexpr uint8_t diff_offset = 127;
+inline uint8_t getOffset( uint8_t pixel_top, uint8_t pixel_bottom ){
+	return pixel_top - pixel_bottom + diff_offset;
+}
+inline uint8_t applyOffset( uint8_t base, uint8_t diff ){
+	return base + diff - diff_offset;
+}
+inline Rgba applyOffsetRgba( Rgba base, Rgba diff ){
+	base.r = applyOffset( base.r, diff.r );
+	base.g = applyOffset( base.g, diff.g );
+	base.b = applyOffset( base.b, diff.b );
+	//NOTE: Alpha is kept
+	return base;
+}
+
 template<typename T>
 void BlendImages( ImageView<T> bottom, ConstImageView<T> overlay, T (*blend)(T,T) ){
 	//TODO: assert same size

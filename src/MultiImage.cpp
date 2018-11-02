@@ -288,7 +288,7 @@ bool MultiImage::optimize2( QString name ) const{
 	*/
 	
 	for( int i=0; i<originals.count(); i++ ){
-		ImageSimMask mask( QSize{originals[i].view().width(), originals[i].view().height()} );
+		ImageSimMask mask( QSize(originals[i].view().width(), originals[i].view().height()) );
 		mask.fill( 0 );
 		
 		//*/

@@ -19,9 +19,15 @@
 #include "FileSizeEval.hpp"
 #include "formats/FormatWebP.hpp"
 
+#include <QImage>
 #include <QBuffer>
 #include <QByteArray>
 #include <QFile>
+
+RgbaImage Format::read( QString path ){
+	//TODO: WebP read
+	return fromQImage( QImage( path ) );
+}
 
 static QByteArray to_raw_data( ConstRgbaView img ){
 	auto alpha = true; //Always including alpha actually seems to work better
@@ -51,10 +57,6 @@ static QByteArray to_raw_data( ConstRgbaView img ){
  *  \param [in] img Image to save
  *  \return buffer containing the compressed image
  */
-QByteArray Format::to_byte_array( QImage img, bool keep_alpha ) const{
-	return to_byte_array( fromQImage( img ), keep_alpha );
-}
-
 QByteArray Format::to_byte_array( ConstRgbaView img, bool keep_alpha ) const{
 	QByteArray data;
 	QBuffer buffer( &data );
@@ -73,9 +75,6 @@ QByteArray Format::to_byte_array( ConstRgbaView img, bool keep_alpha ) const{
 	return data;
 }
 
-bool Format::save( QImage img, QString path ) const{
-	return save( fromQImage(img), path );
-}
 bool Format::save( ConstRgbaView img, QString path ) const{
 	if( format.toLower() == "raw" ){
 		qWarning( "RAW mode should not be saved, only available as to_byte_array()" );

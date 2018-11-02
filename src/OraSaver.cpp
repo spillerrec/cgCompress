@@ -20,6 +20,7 @@
 
 #include <QFileInfo>
 #include <QDateTime>
+#include <QImage>
 
 /** Construct an unoptimized cgCompress file from a set of images.
  *  
@@ -117,7 +118,7 @@ void OraSaver::save( QString path, Format format ) const{
 	QList<std::pair<QString,QByteArray>> files;
 	
 	// Thumbnail
-	QImage thumb = toQImage(first_frame).scaled( 256, 256, Qt::KeepAspectRatio, Qt::SmoothTransformation );;
+	auto thumb = fromQImage( toQImage(first_frame).scaled( 256, 256, Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
 	Format lossy = format.get_lossy();
 	files.append( { lossy.filename("Thumbnails/thumbnail"), lossy.to_byte_array( thumb ) } );
 	

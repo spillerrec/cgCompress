@@ -23,6 +23,7 @@
 #include "Frame.hpp"
 
 #include <utility>
+#include <QList>
 
 /** Contains an image which is made up of many similar images */
 class MultiImage {

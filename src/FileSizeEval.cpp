@@ -22,11 +22,6 @@
 #include <vector>
 
 
-static int compressed_lz4_size( const std::vector<uint8_t>& data ){
-	return FileSize::lz4compress_size( data.data(), data.size() );
-}
-
-
 /** Calculates the sum of the absolute difference between touching pixels
  *  
  *  \param [in] img Image to calculate for
@@ -53,21 +48,17 @@ int FileSize::image_gradient_sum( ConstRgbaView img ){
 
 int FileSize::lz4compress_size( ConstRgbaView img ){
 	std::vector<uint8_t> data;
-	data.resize( img.width() * img.height() * 4 );
+	data.reserve( img.width() * img.height() * 4 );
 	
 	//Encode data
-	for( int iy=0; iy<img.height(); iy++ ){
-		auto row = img[iy];
-		for( int ix=0; ix<img.width(); ix++ ){
-			auto pos = iy*img.width()*4 + ix*4;
-			data[ pos + 0 ] = row[ix].r;
-			data[ pos + 1 ] = row[ix].g;
-			data[ pos + 2 ] = row[ix].b;
-			data[ pos + 3 ] = row[ix].a;
+	for( auto row : img )
+		for( auto val : row ){
+			data.push_back( val.r );
+			data.push_back( val.g );
+			data.push_back( val.b );
+			data.push_back( val.a );
 		}
-	}
 	
 	//Compress
-	auto size = compressed_lz4_size( data );
-	return size;
+	return FileSize::lz4compress_size( data.data(), data.size() );
 }

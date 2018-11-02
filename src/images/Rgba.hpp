@@ -34,6 +34,25 @@ struct Rgba{
 		{ return r!=other.r || g!=other.g || b!=other.b || a!=other.a; }
 	bool operator==( Rgba other ) const
 		{ return !(*this != other); }
+		
+	template<typename Func>
+	Rgba apply( Func f ) const{
+		Rgba out = *this;
+		out.r = f( out.r );
+		out.g = f( out.g );
+		out.b = f( out.b );
+		out.a = f( out.a );
+		return out;
+	}
+	template<typename Func>
+	Rgba apply( Rgba other, Func f ) const{
+		Rgba out = *this;
+		out.r = f( out.r, other.r );
+		out.g = f( out.g, other.g );
+		out.b = f( out.b, other.b );
+		out.a = f( out.a, other.a );
+		return out;
+	}
 };
 
 inline uint8_t mul8U( uint8_t left, uint8_t right ){

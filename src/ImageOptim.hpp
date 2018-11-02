@@ -18,10 +18,12 @@
 #ifndef IMAGE_OPTIM_HPP
 #define IMAGE_OPTIM_HPP
 
-class QImage;
+#include "images/Rgba.hpp"
 
-void ImageDiff( QImage img1, QImage img2, int diff_amount );
-void ImageDiffCombine( QImage base, QImage diff, QImage overlay );
+void ImageDiffAdd( RgbaView base, ConstRgbaView diff );
+
+void ImageDiff( ConstRgbaView img1, ConstRgbaView img2, int diff_amount );
+void ImageDiffCombine( RgbaView base, ConstRgbaView diff, ConstRgbaView overlay );
 
 
 #endif

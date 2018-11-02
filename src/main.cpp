@@ -151,15 +151,16 @@ int main( int argc, char* argv[] ){
 		evaluate_cgcompress( expandFolders( files ) );
 	}
 	else if( options.contains( "--diff-test" ) ){
-		auto file1 = QImage( files[0] );
-		auto file2 = QImage( files[1] );
+		auto file1 = Format::read( files[0] );
+		auto file2 = Format::read( files[1] );
 		ImageDiff( file2, file1, 3 );
 	}
 	else if( options.contains( "--diff-test-apply" ) ){
-		auto file1 = QImage( files[0] );
-		auto file2 = QImage( "ImageDiff-diff.webp" );
-		auto file3 = QImage( "ImageDiff-overlay.webp" );
+		auto file1 = Format::read( files[0] );
+		auto file2 = Format::read( "ImageDiff-diff.webp" );
+		auto file3 = Format::read( "ImageDiff-overlay.webp" );
 		ImageDiffCombine( file1, file2, file3 );
+		format.save( file1, "ImageDiff-result" );
 	}
 	else if( options.contains( "--extract" ) ){
 		for( auto file : files )
