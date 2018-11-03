@@ -18,7 +18,7 @@
 #include "ImageSimilarities.hpp"
 #include "Image.hpp"
 
-#include <cassert>
+#include <functional>
 
 
 void combineMasks( ImageView<bool> mask, ConstImageView<bool> other ){
@@ -27,9 +27,8 @@ void combineMasks( ImageView<bool> mask, ConstImageView<bool> other ){
 
 Image applyMask( ConstImageView<bool> mask, ConstRgbaView image ){
 	mask.assertSizeMatch(image);
-	ImageMask img_mask( mask.width(), mask.height() );
-	img_mask.apply( mask, []( DiffType, bool m ){ return m ? DiffType::MATCHES : DiffType::DIFFERS; } );
-	return { {image}, std::move(img_mask) };
+	auto func = []( bool m ){ return m ? DiffType::MATCHES : DiffType::DIFFERS; };
+	return { {image}, transform( mask, func ) };
 }
 
 
@@ -40,57 +39,35 @@ void setRefTo( ImageView<uint16_t> ref, ConstImageView<bool> mask, uint16_t valu
 }
 
 ImageSimMask getMaskFrom( ConstImageView<uint16_t> refs, uint16_t value ){
-	ImageSimMask mask( refs.width(), refs.height() );
-	mask.apply(refs, [value]( bool, uint16_t ref){
-		return ref == value;
-	});
-	return mask;
-}
-
-static ImageSimMask createMask( ConstRgbaView img1, ConstRgbaView img2, ImageSimMask& mask ){
-	//The mask could be used to ignore already masked areas
-	img1.assertSizeMatch(img2);
-	img1.assertSizeMatch(mask);
-	//assert( img1.size() == img2.size() );
-	//assert( img1.size() == mask.size() );
-	
-	ImageSimMask new_mask( mask.width(), mask.height() );
-	new_mask.fill( false );
-	
-	for( int iy=0; iy<img1.height(); iy++ ){
-		auto row1 = img1[ iy ];
-		auto row2 = img2[ iy ];
-		auto row_old = mask[iy];
-		auto row_new = new_mask[iy];
-		
-		for( int ix=0; ix<img1.width(); ix++ ){
-			if( (row_old[ix] == false) && (row1[ix] == row2[ix]) ){
-				row_new[ix] = true;
-				row_old[ix] = true;
-			}
-		}
-	}
-	
-	return new_mask;
+	return transform(refs, [value]( uint16_t ref){ return ref == value; } );
 }
 
 
 void ImageSimilarities::addImage( ConstRgbaView img ){
 	//TODO: All this should be optimized by ignoring large empty areas
 	
-	//The parts already covered by previous images
-	ImageSimMask already_masked( img.width(), img.height() );
-	already_masked.fill( false );
-	
 	//The indexes of other images sharing same pixels
 	RefImage new_ref( img.width(), img.height() );
 	//Initialize to point to itself, i.e. totally unique
 	new_ref.fill( originals.size() );
 	
+	//The parts already covered by previous images
+	ImageSimMask already_masked( img.width(), img.height() );
+	already_masked.fill( false );
+	
 	for( unsigned i=0; i<originals.size(); i++ ){
-		auto current_mask = createMask( originals[i], img, already_masked );
+		//NOTE: What about doing this in reverse, and simply ignore 'already_masked'?
+		// Find the matching areas
+		ImageSimMask current_mask = transform( originals[i], img, std::equal_to<>() );
+		
+		//Only keep the ares which are not already used
+		current_mask.apply( already_masked, [](auto a, auto b){ return a && !b; } );
+		
 		//set current mask to 'i' in new_ref
 		setRefTo( new_ref, current_mask, i );
+		
+		//Remove those areas from our mask
+		already_masked.apply( current_mask, [](auto a, auto b){ return a || b; } );
 	}
 	
 	originals.push_back( img );

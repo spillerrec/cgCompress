@@ -21,31 +21,17 @@
 #include "decoder/OraHandler.hpp"
 
 #include <cmath>
-
-#include <QPainter>
-#include <QBuffer>
+#include <algorithm>
 
 using namespace std;
 
-//static int guid = 0; //For saving debug images
-
 const auto TRANS_SET = Rgba( 255, 0, 255, 0 );
-const auto TRANS_NONE = Rgba( 0, 0, 0, 0 );
 
-const auto PIXEL_DIFFERENT = 0; //Pixel do not match with other image
-const auto PIXEL_MATCH = 1;     //Pixel is the same as other image
-const auto PIXEL_SHARED = 2;    //Pixel is the same, but must not be set as it differ in another image
-
-static ImageMask make_mask( QSize size ){
-	ImageMask mask( size.width(), size.height() );
-	mask.fill( DiffType::DIFFERS );
-	return mask;
-}
 
 Image::Image( QPoint pos, ConstRgbaView img )
-	:	img(img, pos), mask(make_mask({img.width(), img.height()})) //TODO: avoid mask?
-{
-}
+	:	img(img, pos)
+	, mask(ImageMask( img.width(), img.height(), DiffType::DIFFERS )) //TODO: avoid mask?
+	{ }
 
 static bool content_in_vertical_line( ConstRgbaView img, int x ){
 	for( int iy=0; iy<img.height(); iy++ )
@@ -137,20 +123,11 @@ void Image::combine( RgbaView base ) const{
  *  \param [in] input The image to diff on, must have same dimensions
  *  \return The difference */
 Image Image::difference( Image input ) const{
-	if( get_pos() != input.get_pos() && img.size() != input.img.size() )
+	if( get_pos() != input.get_pos() )
 		throw std::runtime_error( "Image::difference - input pos/size does not match!" );
 	
-	auto w = img.width();
-	auto mask = make_mask( img.size() );
-	for( int iy=0; iy<img.height(); iy++ ){
-		auto out      =       img[iy];
-		auto in       = input.img[iy];
-		auto out_mask = mask[ iy ];
-		for( int ix=0; ix<w; ix++ )
-			out_mask[ix] = (in[ix] == out[ix]) ? DiffType::MATCHES : DiffType::DIFFERS;
-	}
-	
-	return input.newMask( mask );
+	return input.newMask( transform( img.view(), input.img.view()
+		, [](auto a, auto b){ return a==b ? DiffType::MATCHES : DiffType::DIFFERS; } ) );
 }
 
 
@@ -295,7 +272,7 @@ Image Image::clean_alpha( int kernel_size, int threshold ) const{
 		
 		int kernel = 0;
 		for( int ix=0; ix<std::min(half,width); ix++ )
-			;//add( kernel, line[ix] ); //TODO:
+			kernel += (line[ix] > 0 ? 1 : 0);
 		
 		for( int ix=0; ix<width; ix++ ){
 			if( in[ix] == DiffType::MATCHES )
@@ -305,7 +282,7 @@ Image Image::clean_alpha( int kernel_size, int threshold ) const{
 			if( ix > 0 )
 				remove( kernel, in[ix-1] );
 			if( ix+1 < width )
-				;//add( kernel, in[ix+1] ); //TODO:
+				add( kernel, in[ix+1] );
 		}
 		
 		if( iy > 0 )
@@ -319,22 +296,11 @@ Image Image::clean_alpha( int kernel_size, int threshold ) const{
 
 /** \return This image where all transparent pixels are set to transparent black **/
 RgbaImage Image::remove_transparent() const{
-	RgbaImage output = copy( view() );
-	int width = output.width(), height = output.height();
-	
 	if( !mask.valid() )
-		return output; //Nothing is transparent
+		return copy( view() ); //Nothing is transparent
 	
-	for( int iy=0; iy<height; iy++ ){
-		auto out      = output[iy];
-		auto out_mask = mask  [iy];
-			
-		for( int ix=0; ix<width; ix++ )
-			if( out_mask[ix] != DiffType::DIFFERS )
-				out[ix] = TRANS_SET;
-	}
-	
-	return output;
+	return transform( view(), mask.asConst()
+		, [](Rgba img, DiffType m){ return (m == DiffType::DIFFERS) ? img : TRANS_SET; } );
 }
 
 struct ContentMap{
@@ -440,8 +406,7 @@ int Image::alpha_count() const{
 	
 	int count = 0;
 	for( auto row : mask )
-		for( auto value : row )
-			count += (value == DiffType::DIFFERS) ? 1 : 0;
+		count += std::count( row.begin(), row.end(), DiffType::DIFFERS );
 	
 	return count;
 }
@@ -457,14 +422,6 @@ bool Image::mustKeepAlpha() const{
 
 
 Image Image::fromTransparent( ConstRgbaView img ){
-	auto mask = make_mask( { img.width(), img.height() } );
-	
-	for( int iy=0; iy<img.height(); iy++ ){
-		auto out = mask[iy];
-		auto in  = img[iy];
-		for( int ix=0; ix<img.width(); ix++ )
-			out[ix] = (in[ix].a != 0) ? DiffType::DIFFERS : DiffType::MATCHES;
-	}
-	
-	return Image( img ).newMask( mask );
+	return Image( img ).newMask( transform( img, [](Rgba val)
+		{ return (val.a != 0) ? DiffType::DIFFERS : DiffType::MATCHES; } ) );
 }

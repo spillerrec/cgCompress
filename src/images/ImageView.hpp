@@ -134,8 +134,10 @@ class ImageView : public ImageViewBase<T>{
 					val = value;
 		}
 		
-		operator ConstImageView<T>() const
+		ConstImageView<T> asConst() const 
 			{ return { this->data, this->w, this->h, this->stride() }; }
+			
+		operator ConstImageView<T>() const { return asConst(); }
 		
 		ImageView<T> crop( int x, int y, int newWidth, int newHeight) const
 			{ return { this->fromOffset( x, y ), newWidth, newHeight, this->stride() }; }
@@ -168,6 +170,20 @@ class ImageView : public ImageViewBase<T>{
 				
 				for( int ix=0; ix<this->width(); ix++ )
 					row[ix] = f( row[ix], input[ix] );
+			}
+		}
+		
+		template<typename Func, typename U, typename V>
+		void apply( ImageViewBase<U> other, ImageViewBase<V> other2, Func f ){
+			this->assertSizeMatch( other );
+			//TODO: Simplify this
+			for( int iy=0; iy<this->height(); iy++ ){
+				auto row    = (*this)[iy];
+				auto input  = other  [iy];
+				auto input2 = other2 [iy];
+				
+				for( int ix=0; ix<this->width(); ix++ )
+					row[ix] = f( row[ix], input[ix], input2[ix] );
 			}
 		}
 };

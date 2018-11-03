@@ -33,6 +33,10 @@ class Image2 : public ImageView<T>{
 		Image2() : Image2(nullptr, 0, 0) {}
 		Image2( int width, int height )
 			: Image2( new T[width*height], width, height ) {}
+			
+		Image2( int width, int height, T init )
+			: Image2( width, height )
+			{ this->fill( init ); }
 };
 
 template<typename T>
@@ -44,6 +48,19 @@ Image2<T> copy( ConstImageView<T> copy_src ){
 template<typename T>
 Image2<T> copy( ImageView<T> copy_src ){
 	return copy( (ConstImageView<T>)copy_src );
+}
+
+template<typename T, typename Func>
+auto transform( ConstImageView<T> image, Func f){
+	Image2<decltype(f(T()))> out( image.width(), image.height() );
+	out.apply( image, [&]( auto, auto& val){ return f(val); } );
+	return out;
+}
+template<typename T, typename U, typename Func>
+auto transform( ConstImageView<T> image, ConstImageView<U> image2, Func f){
+	Image2<decltype(f(T(), U()))> out( image.width(), image.height() );
+	out.apply( image, image2, [&]( auto, auto& val, auto& val2){ return f(val, val2); } );
+	return out;
 }
 
 #endif
