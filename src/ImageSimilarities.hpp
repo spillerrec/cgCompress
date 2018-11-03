@@ -18,8 +18,6 @@
 #ifndef IMAGE_SIMILARITIES_HPP
 #define IMAGE_SIMILARITIES_HPP
 
-#include <QImage>
-#include <QList>
 #include <memory>
 #include <vector>
 
@@ -27,40 +25,15 @@
 
 class Image;
 
-class ImageSimMask{
-	private:
-		QImage mask;
-		
-	public:
-		ImageSimMask( int width, int height );
-		ImageSimMask( QSize size ) : ImageSimMask( size.width(), size.height() ) { }
-		
-		auto width() const { return mask.width(); }
-		auto height() const { return mask.height(); }
-		auto size() const { return mask.size(); }
-		auto scanLine( int iy ){ return mask.scanLine( iy ); }
-		auto constScanLine( int iy ) const { return mask.constScanLine( iy ); }
-		void fill( unsigned value ){ mask.fill( value ); }
-		
-		void combineMasks( ImageSimMask combine_with );
-		//Image apply( QImage image ) const;
-};
+using ImageSimMask = Image2<bool>;
+using RefImage     = Image2<uint16_t>;
 
-class RefImage{
-	private:
-		std::unique_ptr<uint16_t[]> refs;
-		int width;
-		int height;
-		
-	public:
-		RefImage( int width, int height );
-		
-		uint16_t* getRow( int iy );
-		
-		void setMaskTo( ImageSimMask mask, uint16_t value );
-		void fill( uint16_t value );
-		ImageSimMask getMaskOf( uint16_t value );
-};
+void combineMasks( ImageView<bool> mask, ConstImageView<bool> other );
+Image applyMask( ConstImageView<bool> mask, ConstRgbaView image );
+
+void setRefTo( ImageView<uint16_t> ref, ConstImageView<bool> mask, uint16_t value );
+ImageSimMask getMaskFrom( ConstImageView<uint16_t> refs, uint16_t vakye );
+
 
 /** Contains an image which is made up of many similar images */
 class ImageSimilarities {
@@ -72,7 +45,7 @@ class ImageSimilarities {
 		
 	public:
 		void addImage( ConstRgbaView img );
-		//Image getImagePart( int id, int ref );
+		Image getImagePart( int id, int ref );
 		ImageSimMask getMask( int id, int ref );
 };
 

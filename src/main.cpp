@@ -212,7 +212,7 @@ int main( int argc, char* argv[] ){
 			std::vector<RgbaImage> images;
 			ConstRgbaView last;
 			for( int j=start; j<files.size(); j++ ){
-				images.push_back( fromQImage( QImage( files[j] ) ) );
+				images.push_back( Format::read(files[j]) );
 				//TODO: apply_transformations
 				
 				if( options.contains( "--auto" ) && last.valid() && !isSimilar( images.back(), last ) )

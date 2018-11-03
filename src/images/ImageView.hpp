@@ -18,6 +18,7 @@
 #ifndef IMAGE_VIEW_HPP
 #define IMAGE_VIEW_HPP
 
+#include <cassert>
 #include <cstring>
 #include <algorithm>
 
@@ -78,13 +79,25 @@ class ImageViewBase{
 		auto begin() const{ return (*this)[0]; }
 		auto end()   const{ return (*this)[h]; }
 		
-		bool operator==( ImageViewBase<T> other ) const{
-			if( w != other.w || h != other.h )
+		template<typename U>
+		bool operator==( ImageViewBase<U> other ) const{
+			if( w != other.width() || h != other.height() )
 				return false;
 			for( int iy=0; iy<h; iy++ )
 				if( !std::equal( other[iy].begin(), other[iy].end(), (*this)[iy].begin() ) )
 					return false;
 			return true;
+		}
+		
+		template<typename U>
+		bool operator!=( ImageViewBase<U> other ) const{
+			return !(*this == other);
+		}
+		
+		template<typename U>
+		void assertSizeMatch( ImageViewBase<U> other ){
+			assert( width()  == other.width()  );
+			assert( height() == other.height() );
 		}
 };
 
@@ -136,6 +149,26 @@ class ImageView : public ImageViewBase<T>{
 				for( int iy=0; iy<this->height(); iy++ )
 					std::memcpy((*this)[iy].begin(), other[iy].begin(), sizeof(T)*this->width());
 			//}
+		}
+		
+		template<typename Func>
+		void apply( Func f ){
+			for( auto row : *this )
+				for( auto& value : row )
+					value = f( value );
+		}
+		
+		template<typename Func, typename U>
+		void apply( ImageViewBase<U> other, Func f ){
+			this->assertSizeMatch( other );
+			//TODO: Simplify this
+			for( int iy=0; iy<this->height(); iy++ ){
+				auto row   = (*this)[iy];
+				auto input = other  [iy];
+				
+				for( int ix=0; ix<this->width(); ix++ )
+					row[ix] = f( row[ix], input[ix] );
+			}
 		}
 };
 

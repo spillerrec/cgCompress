@@ -20,83 +20,53 @@
 
 #include <cassert>
 
-const int MASK_TRUE  = 1;
-const int MASK_FALSE = 0;
 
-ImageSimMask::ImageSimMask( int width, int height )
-	: mask( width, height, QImage::Format_Indexed8 ) { }
-	
-void ImageSimMask::combineMasks( ImageSimMask combine_with ){
-	assert( size() == combine_with.size() );
-	
-	for( int iy=0; iy<height(); iy++ ){
-		auto row   = scanLine( iy );
-		auto input = combine_with.constScanLine( iy );
-		
-		for( int ix=0; ix<width(); ix++ )
-			row[ix] = (row[ix] || input[ix]) ? MASK_TRUE : MASK_FALSE;
-	}
+void combineMasks( ImageView<bool> mask, ConstImageView<bool> other ){
+	mask.apply( other, [](bool m, bool o){ return m || o; } );
 }
 
-RefImage::RefImage( int width, int height )
-	:	refs( std::make_unique<uint16_t[]>( width * height ) )
-	,	width(width), height(height)
-	{ }
-
-uint16_t* RefImage::getRow( int iy ){
-	assert( iy >= 0 && iy < height );
-	return refs.get() + iy*width;
+Image applyMask( ConstImageView<bool> mask, ConstRgbaView image ){
+	mask.assertSizeMatch(image);
+	ImageMask img_mask( mask.width(), mask.height() );
+	img_mask.apply( mask, []( DiffType, bool m ){ return m ? DiffType::MATCHES : DiffType::DIFFERS; } );
+	return { {image}, std::move(img_mask) };
 }
 
-void RefImage::setMaskTo( ImageSimMask mask, uint16_t value ){
-	assert( mask.width() == width && mask.height() == height );
-	
-	for( int iy=0; iy<height; iy++ ){
-		auto row = getRow( iy );
-		auto m_row = mask.constScanLine( iy );
-		
-		for( int ix=0; ix<width; ix++ )
-			row[ix] = (m_row[ix] == MASK_TRUE) ? value : row[ix];
-	}
-}
-void RefImage::fill( uint16_t value ){
-	auto total_size = width*height;
-	for( int i=0; i<total_size; i++ )
-		refs[i] = value;
+
+void setRefTo( ImageView<uint16_t> ref, ConstImageView<bool> mask, uint16_t value ){
+	ref.apply(mask, [value]( uint16_t prev, bool mask){
+		return mask ? value : prev;
+	});
 }
 
-ImageSimMask RefImage::getMaskOf( uint16_t value ){
-	ImageSimMask mask( width, height );
-	
-	for( int iy=0; iy<height; iy++ ){
-		auto row = getRow( iy );
-		auto out = mask.scanLine( iy );
-		for( int ix=0; ix<width; ix++ )
-			out[ix] = (row[ix] == value) ? MASK_TRUE : MASK_FALSE;
-	}
-	
-	//TODO: Return null mask if all false
+ImageSimMask getMaskFrom( ConstImageView<uint16_t> refs, uint16_t value ){
+	ImageSimMask mask( refs.width(), refs.height() );
+	mask.apply(refs, [value]( bool, uint16_t ref){
+		return ref == value;
+	});
 	return mask;
 }
 
 static ImageSimMask createMask( ConstRgbaView img1, ConstRgbaView img2, ImageSimMask& mask ){
 	//The mask could be used to ignore already masked areas
+	img1.assertSizeMatch(img2);
+	img1.assertSizeMatch(mask);
 	//assert( img1.size() == img2.size() );
 	//assert( img1.size() == mask.size() );
 	
-	ImageSimMask new_mask = mask;
-	new_mask.fill( MASK_FALSE );
+	ImageSimMask new_mask( mask.width(), mask.height() );
+	new_mask.fill( false );
 	
 	for( int iy=0; iy<img1.height(); iy++ ){
 		auto row1 = img1[ iy ];
 		auto row2 = img2[ iy ];
-		auto row_old = mask.scanLine( iy );
-		auto row_new = new_mask.scanLine( iy );
+		auto row_old = mask[iy];
+		auto row_new = new_mask[iy];
 		
 		for( int ix=0; ix<img1.width(); ix++ ){
-			if( (row_old[ix] == MASK_FALSE) && (row1[ix] == row2[ix]) ){
-				row_new[ix] = MASK_TRUE;
-				row_old[ix] = MASK_TRUE;
+			if( (row_old[ix] == false) && (row1[ix] == row2[ix]) ){
+				row_new[ix] = true;
+				row_old[ix] = true;
 			}
 		}
 	}
@@ -104,31 +74,13 @@ static ImageSimMask createMask( ConstRgbaView img1, ConstRgbaView img2, ImageSim
 	return new_mask;
 }
 
-static Rgba makeTransparent( QRgb color )
-	{ return {}; }//qRgba( qRed( color ), qGreen( color ), qBlue( color ), 0 ); }
-
-//TODO: Use 'Image' class to support transparency?
-/*Image ImageSimMask::apply( QImage image ) const{
-	assert( image.size() == size() );
-	
-	for( int iy=0; iy<image.height(); iy++ ){
-		auto row = (QRgb*)image.scanLine( iy );
-		auto in  = constScanLine( iy );
-		for( int ix=0; ix<image.width(); ix++ )
-			if( in[ix] == MASK_FALSE )
-				row[ix] = makeTransparent( row[ix] );
-	}
-	
-	return Image::fromTransparent( image );
-}*/
-
 
 void ImageSimilarities::addImage( ConstRgbaView img ){
 	//TODO: All this should be optimized by ignoring large empty areas
 	
 	//The parts already covered by previous images
-	ImageSimMask already_masked( QSize{img.width(), img.height()} );
-	already_masked.fill( MASK_FALSE );
+	ImageSimMask already_masked( img.width(), img.height() );
+	already_masked.fill( false );
 	
 	//The indexes of other images sharing same pixels
 	RefImage new_ref( img.width(), img.height() );
@@ -138,7 +90,7 @@ void ImageSimilarities::addImage( ConstRgbaView img ){
 	for( unsigned i=0; i<originals.size(); i++ ){
 		auto current_mask = createMask( originals[i], img, already_masked );
 		//set current mask to 'i' in new_ref
-		new_ref.setMaskTo( current_mask, i );
+		setRefTo( new_ref, current_mask, i );
 	}
 	
 	originals.push_back( img );
@@ -146,10 +98,8 @@ void ImageSimilarities::addImage( ConstRgbaView img ){
 }
 
 ImageSimMask ImageSimilarities::getMask( int id, int ref ){
-	assert( id >= 0 && id < int(originals.size()) );
-	
-	return refs[id].getMaskOf(ref);
+	return getMaskFrom( refs.at(id), ref );
 }
 
-/*Image ImageSimilarities::getImagePart( int id, int ref )
-	{ return getMask( id, ref ).apply( originals[id] ); }*/
+Image ImageSimilarities::getImagePart( int id, int ref )
+	{ return applyMask( getMask( id, ref ), originals[id] ); }

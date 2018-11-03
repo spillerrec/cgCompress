@@ -33,11 +33,6 @@ class Image2 : public ImageView<T>{
 		Image2() : Image2(nullptr, 0, 0) {}
 		Image2( int width, int height )
 			: Image2( new T[width*height], width, height ) {}
-		
-		
-		bool operator==( ConstImageView<T> other ) const{
-			return false; //TODO:
-		}
 };
 
 template<typename T>

@@ -17,7 +17,7 @@
 
 #include "ImageOptim.hpp"
 #include "Format.hpp"
-#include "images/blend.hpp"
+#include "images/Blend.hpp"
 
 #include <cmath>
 #include <utility>

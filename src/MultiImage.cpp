@@ -29,7 +29,6 @@
 #include <iostream>
 #include <string>
 
-#include <QImageReader>
 #include <QtConcurrent>
 #include <QDebug>
 #include <QElapsedTimer>
@@ -288,16 +287,16 @@ bool MultiImage::optimize2( QString name ) const{
 	*/
 	
 	for( int i=0; i<originals.count(); i++ ){
-		ImageSimMask mask( QSize(originals[i].view().width(), originals[i].view().height()) );
+		ImageSimMask mask( originals[i].view().width(), originals[i].view().height() );
 		mask.fill( 0 );
 		
 		//*/
 		for( int j=0; j<originals.count(); j++ ){
-			auto path = QString("simitest/img %1 - %2.png")
+			auto path = QString("simitest/img %1 - %2")
 				.arg( QString::number(i), 3, QLatin1Char('0') )
 				.arg( QString::number(j), 3, QLatin1Char('0') )
 				;
-			//TODO: similarities.getImagePart( i, j ).auto_crop().qimg().save( path );
+			Format("png").save(similarities.getImagePart( i, j ).auto_crop().view(), path );
 		}
 		/*/
 		for( int j=0; j<originals.count(); j++ ){
@@ -404,13 +403,10 @@ bool MultiImage::validate( QString file ) const{
 	for( int i=0; i<reader.imageCount(); i++ ){
 		auto img = reader.read();
 		
-		auto img1 = toQImage(img                ).convertToFormat( QImage::Format_ARGB32 );
-		auto img2 = toQImage(originals[i].view()).convertToFormat( QImage::Format_ARGB32 );
-		
-		if( img1 != img2 ){
+		if( img != originals[i].view() ){
 			qDebug( "Error found at image %d!", i+1 );
-			img1.save( "error-decoded.png" );
-			img2.save( "error-expected.png" );
+			Format("png").save( img,                 "error-decoded" );
+			Format("png").save( originals[i].view(), "error-expected" );
 			return false;
 		}
 	}

@@ -58,8 +58,8 @@ class Image {
 			return *this;
 		}
 		
-	private:
 		Image( SubImage img, ImageMask mask ) : img(img), mask(std::move(mask)) { }
+	private:
 		Image newMask( ConstImageView<DiffType> mask ) const{ return Image( img, copy(mask) ); }
 		
 		QList<Image> segment() const;
