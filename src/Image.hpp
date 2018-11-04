@@ -23,6 +23,8 @@
 
 #include "images/Rgba.hpp"
 
+#include <vector>
+
 enum class DiffType{
 		MATCHES //Pixel is the same as base
 	,	DIFFERS //Pixel is different from base
@@ -62,7 +64,7 @@ class Image {
 	private:
 		Image newMask( ConstImageView<DiffType> mask ) const{ return Image( img, copy(mask) ); }
 		
-		QList<Image> segment() const;
+		std::vector<Image> segment() const;
 		/*QList<Image> diff_segment( Image diff ) const;*/
 		/** \return true if *this* overlaps *other* */
 		/*bool overlaps( Image other ) const{

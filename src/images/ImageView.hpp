@@ -175,7 +175,8 @@ class ImageView : public ImageViewBase<T>{
 		
 		template<typename Func, typename U, typename V>
 		void apply( ImageViewBase<U> other, ImageViewBase<V> other2, Func f ){
-			this->assertSizeMatch( other );
+			this->assertSizeMatch( other  );
+			this->assertSizeMatch( other2 );
 			//TODO: Simplify this
 			for( int iy=0; iy<this->height(); iy++ ){
 				auto row    = (*this)[iy];

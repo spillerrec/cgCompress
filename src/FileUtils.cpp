@@ -28,6 +28,7 @@
 #include "CsvWriter.hpp"
 #include "OraSaver.hpp"
 #include "decoder/OraHandler.hpp"
+#include "decoder/CgImage.hpp"
 
 /** Extracts the images in a cgCompress file.
  *  
@@ -38,22 +39,16 @@
  *  \return The images and the names of the images
  */
 std::vector<std::pair<QString,RgbaImage>> extract_files( QString filename ){
-	std::vector<std::pair<QString,RgbaImage>> files;
 	QFile f( filename );
 	if( !f.open( QIODevice::ReadOnly ) )
-		return files;
+		return {};
 	
-	OraDecoder decoder;
-	if( !decoder.load( f ) )
-		return files;
+	auto image = loadCgImage(f);
 	
-	int image_count = decoder.imageCount();
-	for( int i=0; i<image_count; i++ ){
-		auto img = decoder.read();
-		//TODO: Check img
-		auto index = QString( "%1" ).arg( i, 4, 10, QChar{'0'} );
-		files.emplace_back( index, std::move(img) );
-	}
+	std::vector<std::pair<QString,RgbaImage>> files;
+	files.reserve(image.frameCount());
+	for( int i=0; i<image.frameCount(); i++ )
+		files.emplace_back( QString(), image.renderFrame(i) );
 	
 	return files;
 }

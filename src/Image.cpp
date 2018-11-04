@@ -43,8 +43,8 @@ static bool content_in_vertical_line( ConstRgbaView img, int x ){
 //TODO: Unused?
 /** Segment the image into several separate images, based on the alpha channel
  *  \return List of images which can be combined to into this image */
-QList<Image> Image::segment() const{
-	QList<Image> images;
+std::vector<Image> Image::segment() const{
+	std::vector<Image> images;
 	
 	//Check vertical lines
 	bool content = content_in_vertical_line( img.view(), 0 );
@@ -57,12 +57,12 @@ QList<Image> Image::segment() const{
 		if( cur_content == true )
 			first_line = ix;
 		else
-			images.append( sub_image( first_line,0, ix-first_line, img.height() ) );
+			images.push_back( sub_image( first_line,0, ix-first_line, img.height() ) );
 		
 		content = cur_content;
 	}
 	if( content )
-		images.append( sub_image( first_line,0, img.width()-first_line, img.height() ) );
+		images.push_back( sub_image( first_line,0, img.width()-first_line, img.height() ) );
 	//TODO: grab the last image if content touches the right edge
 	
 	//TODO: check horizontal lines

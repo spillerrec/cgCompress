@@ -67,8 +67,8 @@ inline Rgba applyOffsetRgba( Rgba base, Rgba diff ){
 	return base;
 }
 
-template<typename T>
-void BlendImages( ImageView<T> bottom, ConstImageView<T> overlay, T (*blend)(T,T) ){
+template<typename T, typename U>
+void BlendImages( ImageView<T> bottom, ConstImageView<U> overlay, T (*blend)(T,U) ){
 	//TODO: assert same size
 	for( int iy=0; iy<overlay.height(); iy++ ){
 		auto row_bottom  = bottom [iy];

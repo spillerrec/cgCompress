@@ -18,98 +18,21 @@
 #include "OraHandler.hpp"
 #include "../formats/FormatWebP.hpp"
 #include "../images/Blend.hpp"
+#include "CgImage.hpp"
 
 #include <cstring>
 #include <iterator>
+#include <iostream>
 
 #include <QFile>
 #include <QFileInfo>
 #include <QBuffer>
 #include <QVariant>
 
+#include <pugixml.hpp>
+#include <archive.h>
 #include <archive_entry.h>
 
-using namespace pugi;
-
-static QByteArray read_data( archive* a ){
-	QByteArray raw;
-	
-	//Read chuncks
-	const char *buff;
-	size_t size;
-	int64_t offset;
-	
-	while( true ){
-		switch( archive_read_data_block( a, (const void**)&buff, &size, &offset ) ){
-			case ARCHIVE_OK: raw += QByteArray( buff, size ); break;
-			case ARCHIVE_EOF: return raw;
-			default:
-				qWarning( "Error while reading zip data: %s", archive_error_string(a) );
-				return raw;
-		}
-	}
-}
-
-static RgbaImage read_image( archive* a, const char* format=nullptr ){
-	return FormatWebP::readRgbaImage( read_data( a ) );
-}
-
-static QString next_file( archive* a ){
-	archive_entry *entry;
-	switch( archive_read_next_header( a, &entry ) ){
-		case ARCHIVE_EOF: return QString();
-		case ARCHIVE_OK:
-			return QString::fromWCharArray( archive_entry_pathname_w( entry ) );
-			
-		default:
-			qWarning( "Can't read the next zip header: %s", archive_error_string(a) );
-			return QString();
-	}
-}
-
-bool OraDecoder::read_and_validate( archive *a ){
-	//Read and check mime
-	QString mime = next_file( a );
-	if( mime.isNull() ){
-		qWarning( "Ora image is not an usable zip archive" );
-		return false;
-	}
-		
-	if( mime != "mimetype" ){
-		qWarning( "Ora image must start with the mimetype" );
-		return false;
-	}
-	//TODO: check if it is STORED?
-	
-	QByteArray mime_data = read_data( a );
-	if( mime_data != "image/openraster" ){
-		qWarning( "Mimetype does not match" );
-		return false;
-	}
-	
-	//Read all files
-	QString name;
-	while( !(name = next_file( a )).isNull() ){
-		if( name.startsWith( "data/" ) ){
-			QString suffix = QFileInfo(name).suffix();
-			auto img = read_image( a, suffix.toLocal8Bit().constData() );
-			if( img.width() != 0 )
-				images.emplace( name, std::move(img) );
-			else
-				qWarning( "Could not read data file: %s", name.toLocal8Bit().constData() );
-		}
-		else if( name == "stack.xml" ){
-			QByteArray data = read_data( a );
-			if( !doc.load_buffer( data.data(), data.size() ) )
-				return false;
-		}
-		else
-			qWarning( "Unknown file: %s", name.toLocal8Bit().constData() );
-	}
-	//TODO: check for stack.xml
-	
-	return true;
-}
 
 struct ReadingData{
 	QIODevice& device;
@@ -130,25 +53,57 @@ int stream_close( archive*, void *data ){
 	return ARCHIVE_OK;
 }
 
-bool OraDecoder::load(QIODevice& device){
-	loaded = true;
-	bool success = true;
-	archive* a = archive_read_new();
-	archive_read_support_format_zip(a);
-	
-	ReadingData data( device );
-	if( archive_read_open( a, &data, nullptr, stream_read, stream_close ) ){
-		qDebug( "couldn't open: %s", archive_error_string(a) );
-		success = false;
-	}
-	else
-		success = read_and_validate( a );
-	
-	archive_read_close( a );
-	archive_read_free( a );
-	
-	return success;
-}
+class Archive{
+	private:
+		archive* a {nullptr};
+		ReadingData data;
+		
+		
+	public:
+		Archive( QIODevice& device ) : a( archive_read_new() ), data(device){
+			archive_read_support_format_zip(a);
+			
+			if( archive_read_open( a, &data, nullptr, stream_read, stream_close ) )
+				throw std::runtime_error( "couldn't open" + std::string( archive_error_string(a) ) );
+		}
+		
+		~Archive(){
+			archive_read_close( a );
+			archive_read_free(  a );
+		}
+		
+		QByteArray read_data(){
+			QByteArray raw;
+			
+			//Read chuncks
+			const char *buff;
+			size_t size;
+			int64_t offset;
+			
+			while( true ){
+				switch( archive_read_data_block( a, (const void**)&buff, &size, &offset ) ){
+					case ARCHIVE_OK: raw += QByteArray( buff, size ); break;
+					case ARCHIVE_EOF: return raw;
+					default:
+						qWarning( "Error while reading zip data: %s", archive_error_string(a) );
+						return raw;
+				}
+			}
+		}
+		
+		QString next_file(){
+			archive_entry *entry;
+			switch( archive_read_next_header( a, &entry ) ){
+				case ARCHIVE_EOF: return QString();
+				case ARCHIVE_OK:
+					return QString::fromWCharArray( archive_entry_pathname_w( entry ) );
+					
+				default:
+					qWarning( "Can't read the next zip header: %s", archive_error_string(a) );
+					return QString();
+			}
+		}
+};
 
 void OraDecoder::alpha_replace( RgbaView output, ConstRgbaView image, int dx, int dy ){
 	auto new_width  = std::min(image.width() , output.width()-dx);
@@ -165,89 +120,102 @@ void OraDecoder::src_over( RgbaView output, ConstRgbaView image, int dx, int dy 
 	Blending::BlendImages<Rgba>( crop, image.crop(0,0,new_width,new_height), Blending::srcOverRgba );
 }
 
-void OraDecoder::render_stack( xml_node node, RgbaImage &output, int offset_x, int offset_y ) const{
-	for( xml_node_iterator it = --node.end(); it != --node.begin(); it-- ){
-		std::string name( (*it).name() );
-		if( name == "stack" ){
-			int x = (*it).attribute( "x" ).as_int( 0 );
-			int y = (*it).attribute( "y" ).as_int( 0 );
-			
-			render_stack( *it, output, offset_x+x, offset_y+y );
-		}
-		else if( name == "layer" ){
-			QString source( QString::fromUtf8( (*it).attribute( "src" ).value() ) );
-			int x = (*it).attribute( "x" ).as_int( 0 ) + offset_x;
-			int y = (*it).attribute( "y" ).as_int( 0 ) + offset_y;
-			
-			std::string visibility = (*it).attribute( "visibility" ).value();
-			if( visibility == "" || visibility == "visible" ){
-				auto img_it = images.find( source );
-				if( img_it == images.end() ){
-					qWarning( "Layer source not found: %s", source.toLocal8Bit().constData() );
-					return;
-				}
-				auto& image = img_it->second;
-					
-				//composite-op
-				std::string composite = (*it).attribute( "composite-op" ).value();
-				if( composite == "cgcompress:alpha-replace" )
-					alpha_replace( output, image, x, y );
-				else if( composite == "svg:src-over" || composite == "" ){
-					src_over( output, image, x, y );
-				}
-				else{
-					qWarning( "Unsupported composite-op: %s", composite.c_str() );
-					return;
-				}
-			}
-		}
-		else{
-			qWarning( "Unrecognized element: %s", name.c_str() );
-		}
-	}
+
+CgBlendType blendTypeFromString( const std::string& str ){
+	if( str == "cgcompress:alpha-replace" )
+		return CgBlendType::ALPHA_REPLACE;
+	else if( str == "svg:src-over" || str == "" )
+		return CgBlendType::SRC_OVER;
+	else
+		throw std::runtime_error( "Unsupported composite-op: " + str );
 }
 
-RgbaImage OraDecoder::read(){
-	frame++;
+
+CgImage loadCgImage( QIODevice& device ){
+	CgImage image;
+	Archive a(device);
 	
-	if( !loaded )
-		return {};
+	bool stack_loaded = false;
+	pugi::xml_document doc;
 	
-	xml_node img = doc.child( "image" );
+	//Read and check mime
+	QString mime = a.next_file();
+	if( mime.isNull() )
+		throw std::runtime_error( "CgImage is not an usable zip archive" );
+		
+	if( mime != "mimetype" )
+		throw std::runtime_error( "CgImage must start with the mimetype" );
+	//TODO: check if it is STORED?
+	
+	QByteArray mime_data = a.read_data();
+	if( !(mime_data == "image/openraster" || mime_data == "image/x-cgcompress") )
+		throw std::runtime_error( "Mimetype does not match" );
+	
+	//Read all files
+	QString name;
+	while( !(name = a.next_file()).isNull() ){
+		if( name.startsWith( "data/" ) ){
+			QString suffix = QFileInfo(name).suffix();
+			CgPrimitive pri;
+			pri.img =  FormatWebP::readRgbaImage( a.read_data() );
+			pri.filename = name.toUtf8().constData();
+			
+			if( pri.img.width() != 0 )
+				image.addPrimitive( std::move(pri) );
+			else
+				std::cout << "Could not read data file: " << pri.filename.c_str() << '\n';
+		}
+		else if( name == "stack.xml" ){
+			QByteArray data = a.read_data();
+			if( !doc.load_buffer( data.data(), data.size() ) )
+				throw std::runtime_error( "Could not parse stack.xml" );
+			stack_loaded = true;
+		}
+		else
+			std::cout << "Unknown file: " << name.toLocal8Bit().constData() << '\n';
+		//TODO: Thumbnail
+	}
+	
+	if( !stack_loaded )
+		throw std::runtime_error( "stack.xml not found" );
+	
+	//Parse stack.xml
+	auto img = doc.child( "image" );
 	int width = img.attribute( "w" ).as_int( -1 );
 	int height = img.attribute( "h" ).as_int( -1 );
-	if( width <= 0 || height <= 0 ){
-		qWarning( "Image dimensions are invalid" );
-		return {};
-	}
+	image.setDimensions( width, height );
 	
-	xml_node stack = img.child( "stack" );
-	for( int i=0; i<frame; i++ )
-		stack = stack.next_sibling( "stack" );
+	auto stack = img.child( "stack" );
 	if( !stack )
-		return {};
-	
-	RgbaImage output( width, height );
-	render_stack( stack, output );
-	return output;
-}
+		throw std::runtime_error( "No frames found" );
+	do{
+		CgFrame frame;
+		
+		for( auto it = --stack.end(); it != --stack.begin(); it-- )
+			if( it->name() == std::string("layer") ){
+				CgBlend layer;
+				
+				QString source( QString::fromUtf8( it->attribute( "src" ).value() ) );
+				layer.x = it->attribute( "x" ).as_int( 0 );
+				layer.y = it->attribute( "y" ).as_int( 0 );
+				
+				auto src_name = it->attribute( "src" ).value();
+				layer.primitive_id = image.findPrimitive( src_name );
+					
+				//composite-op
+				layer.mode = blendTypeFromString( it->attribute( "composite-op" ).value() );
+				
+				frame.layers.push_back(layer);
+			}
+			else
+				std::cout << "Unrecognized element: " << it->name() << '\n';
 
-int OraDecoder::imageCount() const{
-	//Counts the amount of "stack" elements in "image"
-	auto frames = doc.child( "image" ).children( "stack" );
-	return std::distance( frames.begin(), frames.end() );
+		image.addFrame(frame);
+		
+	}while( (stack = stack.next_sibling("stack")) );
+	
+	if( !image.isValid() )
+		throw std::runtime_error( "CgImage contained errors or is otherwise invalid" );
+	
+	return image;
 }
-/*
-int OraDecoder::nextImageDelay() const{
-	int wanted = frame + 1 >= imageCount() ? 0 : frame + 1;
-	
-	//Iterate to the node we want
-	auto node = doc.child( "image" ).children( "stack" ).begin();
-	while( wanted > 0 ){
-		node++;
-		wanted--;
-	}
-	
-	return node->attribute( "delay" ).as_int( 100 );
-}*/
-

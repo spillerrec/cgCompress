@@ -18,41 +18,14 @@
 #ifndef ORA_DECODER_HPP
 #define ORA_DECODER_HPP
 
-#include <map>
-
-#include <QIODevice>
-
-#include <archive.h>
-
-#include <pugixml.hpp>
-
 #include "../images/Rgba.hpp"
 
-class OraDecoder{
-	private:
-		int frame{ -1 };
-		bool loaded{ false };
-		
-		std::map<QString,RgbaImage> images;
-		
-		pugi::xml_document doc;
-		
-		bool read_and_validate( archive *a );
-		
-		void render_stack( pugi::xml_node node, RgbaImage &output, int offset_x=0, int offset_y=0 ) const;
-	
-	public:
-		bool load(QIODevice& device);
-		
-		RgbaImage read();
-		
-		int imageCount() const;
-		
-		
+struct OraDecoder{
 		static void alpha_replace( RgbaView output, ConstRgbaView image, int dx, int dy );
 		static void src_over(      RgbaView output, ConstRgbaView image, int dx, int dy );
-		
 };
+
+class CgImage loadCgImage( class QIODevice& device );
 
 
 #endif

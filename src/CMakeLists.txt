@@ -4,6 +4,7 @@ find_package(Qt5Widgets REQUIRED)
 find_package(Qt5Concurrent REQUIRED)
 
 set(SOURCES_MISC
+	decoder/CgImage.cpp
 	decoder/OraHandler.cpp
 	formats/FormatWebP.cpp
 	)

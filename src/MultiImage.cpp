@@ -20,6 +20,7 @@
 #include "Converter.hpp"
 #include "ProgressBar.hpp"
 #include "decoder/OraHandler.hpp"
+#include "decoder/CgImage.hpp"
 #include "images/Rgba.hpp"
 
 #include "ImageSimilarities.hpp"
@@ -389,19 +390,21 @@ bool MultiImage::validate( QString file ) const{
 		return false;
 	}
 	
-	OraDecoder reader;
-	if( !reader.load( f ) ){
-		qDebug( "Image would not load for validation" );
+	CgImage image;
+	try{
+		image = loadCgImage(f);
+	}
+	catch(...){
 		return false;
 	}
 	
-	if( reader.imageCount() != originals.size() ){
+	if( image.frameCount() != originals.size() ){
 		qDebug( "Not the same amount of images in resulting file" );
 		return false;
 	}
 	
-	for( int i=0; i<reader.imageCount(); i++ ){
-		auto img = reader.read();
+	for( int i=0; i<image.frameCount(); i++ ){
+		auto img = image.renderFrame(i);
 		
 		if( img != originals[i].view() ){
 			qDebug( "Error found at image %d!", i+1 );
