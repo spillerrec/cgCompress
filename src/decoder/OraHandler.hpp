@@ -20,12 +20,19 @@
 
 #include "../images/Rgba.hpp"
 
-struct OraDecoder{
-		static void alpha_replace( RgbaView output, ConstRgbaView image, int dx, int dy );
-		static void src_over(      RgbaView output, ConstRgbaView image, int dx, int dy );
-};
+class Image;
+class Frame;
+class Format;
+class CgImage;
+class QString;
+class QIODevice;
 
-class CgImage loadCgImage( class QIODevice& device );
-
+CgImage loadCgImage( QIODevice& device );
+bool saveCgImage( const CgImage& image, QString path );
+bool saveCgImage( QString path
+	,	int width, int height, Format format
+	,	const std::vector<Image>& primitives
+	,	const std::vector<Frame>& frames
+	);
 
 #endif

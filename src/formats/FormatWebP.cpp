@@ -24,13 +24,15 @@
 #include "webp/decode.h"
 #include "webp/encode.h"
 
-
+#include <iostream>
 RgbaImage FormatWebP::readRgbaImage( QByteArray data ){
 	int width, height;
 	
 	uint8_t *raw = WebPDecodeBGRA( (uint8_t*)data.data(), data.size(), &width, &height );
-	if( !raw )
+	if( !raw ){
+		std::cout << "REad failed\n";
 		return { 0,0 };
+	}
 	
 	return RgbaImage( reinterpret_cast<Rgba*>( raw ), width, height );
 }

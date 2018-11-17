@@ -26,7 +26,6 @@
 #include "Format.hpp"
 #include "Compression.hpp"
 #include "CsvWriter.hpp"
-#include "OraSaver.hpp"
 #include "decoder/OraHandler.hpp"
 #include "decoder/CgImage.hpp"
 
@@ -151,6 +150,7 @@ static void append_all_files( QList<std::pair<QString,QByteArray>>& files, QDir 
  *  \param [in] dir Path to the directory
  */
 void pack_directory( QDir dir, QString name_extension ){
+	qFatal( "Not yet ported!" );
 	if( !dir.exists() ){
 		qWarning( "Path must be a directory!" );
 		return;
@@ -179,7 +179,7 @@ void pack_directory( QDir dir, QString name_extension ){
 	//Get data files
 	append_all_files( files, dir, "data" );
 	
-	OraSaver::save( dir.dirName() + name_extension + ".cgcompress", mimetype, stack, files );
+	//OraSaver::save( dir.dirName() + name_extension + ".cgcompress", mimetype, stack, files );
 }
 
 bool isSimilar( ConstRgbaView img1, ConstRgbaView img2 ){

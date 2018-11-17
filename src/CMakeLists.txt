@@ -27,7 +27,6 @@ set(SOURCES_MAIN
 	ImageOptim.cpp
 	ImageSimilarities.cpp
 	MultiImage.cpp
-	OraSaver.cpp
 	main.cpp
 	)
 	

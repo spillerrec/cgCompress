@@ -33,6 +33,8 @@ enum class DiffType{
 
 using ImageMask = Image2<DiffType>;
 
+struct CgPrimitive;
+
 class Image {
 	private:
 		SubImage img;
@@ -94,6 +96,8 @@ class Image {
 		 *  \return The image in compressed form */
 		QByteArray to_byte_array( Format format, bool keep_alpha=true ) const
 			{ return saved_data.size() > 0 ? saved_data : format.to_byte_array( remove_transparent(), keep_alpha ); }
+		
+		CgPrimitive to_primitive() const;
 		
 		/** Create a clipped version of the image
 		 *  \param [in] x The amount to remove from the left

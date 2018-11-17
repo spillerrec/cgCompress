@@ -22,6 +22,8 @@
 #include <string>
 #include "../images/Rgba.hpp"
 
+class Format;
+
 enum class CgBlendType{
    SRC_OVER,
    ALPHA_REPLACE,
@@ -61,6 +63,7 @@ class CgImage{
       void renderFrameInternal( RgbaView output, int id, int x, int y, int w, int h );
       
    public:
+      int primitiveCount() const{ return primitives.size(); }
       int frameCount() const{ return frames.size(); }
       RgbaImage renderFrame( int id );
       
@@ -70,10 +73,21 @@ class CgImage{
          this->width  = width;
          this->height = height;
       }
+	  
+	  //TODO: Change to width() / height() for consistency
+	  int getWidth() const{ return width; }
+	  int getHeight() const{ return height; }
       
       bool isValid() const;
       
       int findPrimitive( const std::string& name );
+	  
+	  auto& getPrimitve( int i )       { return primitives.at( i ); }
+	  auto& getPrimitve( int i ) const { return primitives.at( i ); }
+	  auto& getFrame(    int i )       { return frames    .at( i ); }
+	  auto& getFrame(    int i ) const { return frames    .at( i ); }
+	  
+	  void autosetPrimitiveNames( Format format );
 };
 
 #endif

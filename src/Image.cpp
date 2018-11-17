@@ -18,7 +18,8 @@
 #include "Image.hpp"
 #include "FileSizeEval.hpp"
 #include "formats/FormatWebP.hpp"
-#include "decoder/OraHandler.hpp"
+#include "decoder/CgImage.hpp"
+#include "images/Blend.hpp"
 
 #include <cmath>
 #include <algorithm>
@@ -32,6 +33,14 @@ Image::Image( QPoint pos, ConstRgbaView img )
 	:	img(img, pos)
 	, mask(ImageMask( img.width(), img.height(), DiffType::DIFFERS )) //TODO: avoid mask?
 	{ }
+	
+CgPrimitive Image::to_primitive() const{
+	CgPrimitive out;
+	out.img = remove_transparent();
+	//TODO: Support blend modes?
+	
+	return out;
+}
 
 static bool content_in_vertical_line( ConstRgbaView img, int x ){
 	for( int iy=0; iy<img.height(); iy++ )
@@ -112,11 +121,18 @@ QList<Image> Image::diff_segment( Image diff ) const{
 }
 */
 
+static void src_over( RgbaView output, ConstRgbaView image, int dx, int dy ){
+	auto new_width  = std::min(image.width() , output.width()-dx);
+	auto new_height = std::min(image.height(), output.width()-dy);
+	auto crop = output.crop( dx, dy, new_width, new_height );
+	Blending::BlendImages<Rgba>( crop, image.crop(0,0,new_width,new_height), Blending::srcOverRgba );
+}
+
 /** Paint this image onto 'base'
  *  \param [in] base The image to blend this image onto
  *  \return The combined image */
 void Image::combine( RgbaView base ) const{
-	OraDecoder::src_over( base, view(), get_pos().x(), get_pos().y() );
+	src_over( base, view(), get_pos().x(), get_pos().y() );
 }
 
 /** The difference between the two images

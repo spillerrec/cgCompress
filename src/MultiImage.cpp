@@ -16,7 +16,6 @@
 */
 
 #include "MultiImage.hpp"
-#include "OraSaver.hpp"
 #include "Converter.hpp"
 #include "ProgressBar.hpp"
 #include "decoder/OraHandler.hpp"
@@ -29,6 +28,7 @@
 #include <climits>
 #include <iostream>
 #include <string>
+#include <set>
 
 #include <QtConcurrent>
 #include <QDebug>
@@ -252,9 +252,11 @@ bool MultiImage::optimize( QString name ) const{
 	//TODO: Known not to work on transparent images
 	//for( auto& frame : final_frames )
 	//	frame.remove_pointless_layers();
-	
-	OraSaver( final_primitives, final_frames ).save( name + ".cgcompress", format );
-	return true;
+
+	return saveCgImage( name + ".cgcompress"
+		,	originals[0].view().width(), originals[0].view().height(), format
+		,	final_primitives, final_frames
+		);
 }
 
 /** Alternative version of ::optimize()

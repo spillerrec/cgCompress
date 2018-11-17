@@ -17,6 +17,7 @@
 
 #include "CgImage.hpp"
 #include "../images/Blend.hpp"
+#include "../Format.hpp"
 
 struct Rect{
    int x, y, width, height;
@@ -106,4 +107,10 @@ int CgImage::findPrimitive( const std::string& name ){
       return -1;
    else
       return it - primitives.begin();
+}
+
+
+void CgImage::autosetPrimitiveNames( Format format ){
+	for( int i=0; i<primitiveCount(); i++ )
+		primitives.at(i).filename = "data/" + std::to_string(i) + "." + format.ext();
 }

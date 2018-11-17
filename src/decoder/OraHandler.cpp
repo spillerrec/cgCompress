@@ -18,6 +18,8 @@
 #include "OraHandler.hpp"
 #include "../formats/FormatWebP.hpp"
 #include "../images/Blend.hpp"
+#include "../Image.hpp"
+#include "../Frame.hpp"
 #include "CgImage.hpp"
 
 #include <cstring>
@@ -105,21 +107,6 @@ class Archive{
 		}
 };
 
-void OraDecoder::alpha_replace( RgbaView output, ConstRgbaView image, int dx, int dy ){
-	auto new_width  = std::min(image.width() , output.width()-dx);
-	auto new_height = std::min(image.height(), output.width()-dy);
-	//TODO: Warning if inconsistent?
-	auto crop = output.crop( dx, dy, new_width, new_height );
-	Blending::BlendImages<Rgba>( crop, image.crop(0,0,new_width,new_height), Blending::alphaReplace );
-}
-
-void OraDecoder::src_over( RgbaView output, ConstRgbaView image, int dx, int dy ){
-	auto new_width  = std::min(image.width() , output.width()-dx);
-	auto new_height = std::min(image.height(), output.width()-dy);
-	auto crop = output.crop( dx, dy, new_width, new_height );
-	Blending::BlendImages<Rgba>( crop, image.crop(0,0,new_width,new_height), Blending::srcOverRgba );
-}
-
 
 CgBlendType blendTypeFromString( const std::string& str ){
 	if( str == "cgcompress:alpha-replace" )
@@ -157,7 +144,9 @@ CgImage loadCgImage( QIODevice& device ){
 		if( name.startsWith( "data/" ) ){
 			QString suffix = QFileInfo(name).suffix();
 			CgPrimitive pri;
-			pri.img =  FormatWebP::readRgbaImage( a.read_data() );
+			auto buffer = a.read_data();
+			std::cout << "File size: " << buffer.size() << '\n';
+			pri.img =  FormatWebP::readRgbaImage( buffer );
 			pri.filename = name.toUtf8().constData();
 			
 			if( pri.img.width() != 0 )
@@ -218,4 +207,178 @@ CgImage loadCgImage( QIODevice& device ){
 		throw std::runtime_error( "CgImage contained errors or is otherwise invalid" );
 	
 	return image;
+}
+
+
+#include "../Format.hpp"
+#include "../minizip/zip.h"
+#include <boost/range/adaptor/reversed.hpp>
+#include <QString>
+#include <QDate>
+
+static void setTime( tm_zip &tm, QDate date, QTime time ){
+	tm.tm_sec  = time.second();
+	tm.tm_min  = time.minute();
+	tm.tm_hour = time.hour();
+	tm.tm_mday = date.day();
+	tm.tm_mon  = date.month();
+	tm.tm_year = date.year();
+}
+
+static bool addByteArray( zipFile &zf, QString name, QByteArray arr, int compression=0 ){
+	zip_fileinfo zi;
+
+	zi.dosDate = 0;
+	zi.internal_fa = 0;
+	zi.external_fa = 0;
+	
+	QDateTime time = QDateTime::currentDateTimeUtc();
+	setTime( zi.tmz_date, time.date(), time.time() );
+
+	//Start file
+	int err = zipOpenNewFileInZip3_64(
+			zf, name.toUtf8().constData(), &zi
+		,	NULL, 0, NULL, 0, NULL // comment
+		, (compression != 0) ? Z_DEFLATED : 0, compression, 0
+		//,	0, 0, 0
+		,	-MAX_WBITS, DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY
+		,	NULL, 0, 0  // password, crcFile, zip64);
+		);
+	
+	//Write file
+	zipWriteInFileInZip( zf, arr.constData(), arr.size() );
+	
+	//Finish file
+	return zipCloseFileInZip( zf ) == ZIP_OK;;
+}
+
+static bool addStringFile( zipFile &zf, QString name, QString contents, bool compress=false ){
+	return addByteArray( zf, name, contents.toUtf8(), compress ? 9 : 0 );
+}
+
+static std::string createStack( const CgImage& image ){
+	QString stack( "<?xml version='1.0' encoding='UTF-8'?>\n" );
+	stack += QString( "<image w=\"%1\" h=\"%2\">" ).arg( image.getWidth() ).arg( image.getHeight() );
+	
+	for( int i=0; i<image.frameCount(); i++ ){
+		stack += "<stack>";
+		
+		auto& frame = image.getFrame( i );
+		for( auto& layer : boost::adaptors::reverse(frame.layers) ){
+			QString composition = "composite-op=\"cgcompress:alpha-replace\"";
+			switch( layer.mode ){
+				case CgBlendType::SRC_OVER:      composition=""; break;
+				case CgBlendType::ALPHA_REPLACE: composition="composite-op=\"cgcompress:alpha-replace\""; break;
+				case CgBlendType::FAST_OVER:     composition="composite-op=\"cgcompress:fast\""; break;
+				case CgBlendType::DIFF_ADD:      composition="composite-op=\"cgcompress:diff-add\""; break;
+				case CgBlendType::COPY_FRAME:    composition=""; break;
+				default: std::terminate();
+			}
+			
+			if( layer.mode != CgBlendType::COPY_FRAME ){
+				stack += QString( "<layer %1 name=\"%2\" src=\"%2\" x=\"%3\" y=\"%4\" />" )
+					.arg( composition )
+					.arg( image.getPrimitve(layer.primitive_id).filename.c_str() )
+					.arg( layer.x )
+					.arg( layer.y ) //TODO: width/height?
+					;
+			}
+			else{
+				//TODO:
+				qDebug( "Copy frame not yet implemented" );
+				std::terminate();
+			}
+		}
+		
+		stack += "</stack>";
+	}
+	
+	stack += "</image>";
+	
+	return stack.toUtf8().constData();
+}
+
+
+bool saveCgImage( const CgImage& image, QString path ){
+	if( !image.isValid() )
+		return false;
+	
+	qDebug("opening\n");
+	//TODO: make wrapper class for zipFile
+	zipFile zf = zipOpen64( path.toLocal8Bit().constData(), 0 );
+	
+	//Save mimetype without compression
+	addStringFile( zf, "mimetype", "image/x-cgcompress" );
+	
+	//Save stack with compression
+	addStringFile( zf, "stack.xml", createStack(image).c_str(), true );
+	
+	/* TODO: Thumbnail
+	auto first_frame = frames.front().reconstruct();
+	auto thumb = fromQImage( toQImage(first_frame).scaled( 256, 256, Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
+	Format lossy = format.get_lossy();
+	files.append( { lossy.filename("Thumbnails/thumbnail"), lossy.to_byte_array( thumb ) } );
+	*/
+	
+	//Save all data files
+	for( int i=0; i<image.primitiveCount(); i++ ){
+		auto& pri = image.getPrimitve(i);
+		addByteArray( zf, pri.filename.c_str(), Format( "webp" ).to_byte_array( pri.img ) ); //TODO: Format
+		//TODO: compress if there are significant savings. Perhaps user defined threshold?
+	}
+	
+	qDebug("closing\n");
+	zipClose( zf, NULL );
+	return true;
+}
+
+bool saveCgImage( class QString path
+	,	int width, int height, Format format
+	,	const std::vector<Image>& primitives
+	,	const std::vector<Frame>& frames
+){
+	CgImage cg;
+	cg.setDimensions( width, height );
+	
+	//Find all used layers, and return a sorted list of the used ids
+	std::vector<int> used_layers;
+	for( auto& frame : frames )
+		for( auto layer : frame.layers )
+			used_layers.push_back( layer );
+	std::sort( used_layers.begin(), used_layers.end() );
+	used_layers.erase( std::unique( used_layers.begin(), used_layers.end() ), used_layers.end() );
+	
+	//reverse lookup
+	std::vector<int> layer_to_id( primitives.size(), -1 );
+	int index=0;
+	for( auto used : used_layers )
+		layer_to_id.at(used) = index++;
+	
+	//convert...
+	std::vector<CgBlend> blends;
+	for( size_t i=0; i<primitives.size(); i++ ){
+		auto& img = primitives[i];
+		CgBlend blend;
+		blend.primitive_id = layer_to_id[i];
+		blend.x      = img.get_pos().x();
+		blend.y      = img.get_pos().y();
+		blend.width  = img.view().width();
+		blend.height = img.view().height();
+		blend.mode   = CgBlendType::ALPHA_REPLACE;
+		blends.push_back( blend );
+	}
+	
+	for( auto id : used_layers )
+		cg.addPrimitive( primitives[id].to_primitive() );
+	for( auto& frame : frames ){
+		CgFrame cgframe;
+		
+		for( auto layer : frame.layers )
+			cgframe.layers.push_back( blends.at(layer) );
+		
+		cg.addFrame( cgframe );
+	}
+	
+	cg.autosetPrimitiveNames( format );
+	return saveCgImage( cg, path );
 }
