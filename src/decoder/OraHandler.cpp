@@ -152,7 +152,7 @@ CgImage loadCgImage( QIODevice& device ){
 			if( pri.img.width() != 0 )
 				image.addPrimitive( std::move(pri) );
 			else
-				std::cout << "Could not read data file: " << pri.filename.c_str() << '\n';
+				throw std::runtime_error( "Could not read data file: " + pri.filename );
 		}
 		else if( name == "stack.xml" ){
 			QByteArray data = a.read_data();
@@ -244,9 +244,12 @@ static bool addByteArray( zipFile &zf, QString name, QByteArray arr, int compres
 		,	-MAX_WBITS, DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY
 		,	NULL, 0, 0  // password, crcFile, zip64);
 		);
+	if( err != ZIP_OK )
+		return false;
 	
 	//Write file
-	zipWriteInFileInZip( zf, arr.constData(), arr.size() );
+	if( ZIP_OK != zipWriteInFileInZip( zf, arr.constData(), arr.size() ) )
+		return false;
 	
 	//Finish file
 	return zipCloseFileInZip( zf ) == ZIP_OK;;
@@ -275,18 +278,21 @@ static std::string createStack( const CgImage& image ){
 				default: std::terminate();
 			}
 			
-			if( layer.mode != CgBlendType::COPY_FRAME ){
-				stack += QString( "<layer %1 name=\"%2\" src=\"%2\" x=\"%3\" y=\"%4\" />" )
-					.arg( composition )
-					.arg( image.getPrimitve(layer.primitive_id).filename.c_str() )
-					.arg( layer.x )
-					.arg( layer.y ) //TODO: width/height?
-					;
-			}
-			else{
-				//TODO:
-				qDebug( "Copy frame not yet implemented" );
-				std::terminate();
+			auto& pri = image.getPrimitve(layer.primitive_id);
+			if( pri.img.width() != 0 && pri.img.height() != 0 ){
+				if( layer.mode != CgBlendType::COPY_FRAME ){
+					stack += QString( "<layer %1 name=\"%2\" src=\"%2\" x=\"%3\" y=\"%4\" />" )
+						.arg( composition )
+						.arg( pri.filename.c_str() )
+						.arg( layer.x )
+						.arg( layer.y ) //TODO: width/height?
+						;
+				}
+				else{
+					//TODO:
+					qDebug( "Copy frame not yet implemented" );
+					std::terminate();
+				}
 			}
 		}
 		
@@ -299,6 +305,7 @@ static std::string createStack( const CgImage& image ){
 }
 
 
+#include <QImage>
 bool saveCgImage( const CgImage& image, QString path ){
 	if( !image.isValid() )
 		return false;
@@ -308,22 +315,27 @@ bool saveCgImage( const CgImage& image, QString path ){
 	zipFile zf = zipOpen64( path.toLocal8Bit().constData(), 0 );
 	
 	//Save mimetype without compression
-	addStringFile( zf, "mimetype", "image/x-cgcompress" );
+	if( !addStringFile( zf, "mimetype", "image/x-cgcompress" ) )
+		return false;
 	
 	//Save stack with compression
-	addStringFile( zf, "stack.xml", createStack(image).c_str(), true );
+	if( !addStringFile( zf, "stack.xml", createStack(image).c_str(), true ) )
+		return false;
 	
-	/* TODO: Thumbnail
-	auto first_frame = frames.front().reconstruct();
-	auto thumb = fromQImage( toQImage(first_frame).scaled( 256, 256, Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
-	Format lossy = format.get_lossy();
-	files.append( { lossy.filename("Thumbnails/thumbnail"), lossy.to_byte_array( thumb ) } );
-	*/
+	//* TODO: Thumbnail
+	auto& first_frame = image.getPrimitve(0);
+	auto thumb = fromQImage( toQImage(first_frame.img).scaled( 256, 256, Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
+	Format lossy = Format( "webp" ).get_lossy();
+	if( !addByteArray( zf, lossy.filename("Thumbnails/thumbnail"), lossy.to_byte_array( thumb ) ) )
+		return false;
+	//*/
 	
 	//Save all data files
 	for( int i=0; i<image.primitiveCount(); i++ ){
 		auto& pri = image.getPrimitve(i);
-		addByteArray( zf, pri.filename.c_str(), Format( "webp" ).to_byte_array( pri.img ) ); //TODO: Format
+		if( pri.img.width() != 0 && pri.img.height() != 0)
+			if( !addByteArray( zf, pri.filename.c_str(), Format( "webp" ).to_byte_array( pri.img ) ) ) //TODO: Format
+				return false;
 		//TODO: compress if there are significant savings. Perhaps user defined threshold?
 	}
 	

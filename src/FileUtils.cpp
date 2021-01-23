@@ -22,12 +22,19 @@
 #include <QFile>
 
 #include <QDebug>
+#include <iostream>
 
 #include "Format.hpp"
 #include "Compression.hpp"
 #include "CsvWriter.hpp"
 #include "decoder/OraHandler.hpp"
 #include "decoder/CgImage.hpp"
+
+
+std::string padded_tostring( int number, int count = 4, char prefix = '0' ){
+	auto int_string = std::to_string(number);
+	return std::string(count - int_string.length(), prefix) + int_string;
+}
 
 /** Extracts the images in a cgCompress file.
  *  
@@ -47,7 +54,7 @@ std::vector<std::pair<QString,RgbaImage>> extract_files( QString filename ){
 	std::vector<std::pair<QString,RgbaImage>> files;
 	files.reserve(image.frameCount());
 	for( int i=0; i<image.frameCount(); i++ )
-		files.emplace_back( QString(), image.renderFrame(i) );
+		files.emplace_back( QString(padded_tostring(i).c_str()), image.renderFrame(i) );
 	
 	return files;
 }
@@ -68,7 +75,7 @@ void extract_cgcompress( QString filename, Format format ){
 	current.cd( file.baseName() );
 	
 	for( auto& file2 : extract_files( filename ) )
-		format.save( file2.second, current.absolutePath() + "/" + file.baseName() + file2.first + "." + file.suffix() );
+		format.save( file2.second, current.absolutePath() + "/" + file.baseName() + '_' + file2.first );
 }
 
 void evaluate_cgcompress( QStringList files ){

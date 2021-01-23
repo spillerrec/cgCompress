@@ -20,6 +20,8 @@
 
 #include "../images/Rgba.hpp"
 
+#include <vector>
+
 class Image;
 class Frame;
 class Format;

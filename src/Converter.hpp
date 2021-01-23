@@ -20,9 +20,9 @@
 
 #include "Image.hpp"
 
+#include <QList>
 #include <utility>
 
-#include <QList>
 #include <QByteArray>
 #include <vector>
 
@@ -61,7 +61,7 @@ class Converter {
 		/** \return The image used for converting **/
 		Image get_primitive() const;
 		
-		static std::vector<int> path( const QList<Converter>& converters, int from, int to=0 );
+		static std::vector<int> path( const std::vector<Converter>& converters, int from, int to=0 );
 		
 		static auto less_size( const Converter& a, const Converter& b ){ return a.size < b.size; }
 		static auto less_to(   const Converter& a, const Converter& b ){ return a.to   < b.to  ; }

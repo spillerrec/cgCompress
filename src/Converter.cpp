@@ -28,7 +28,7 @@ Image Converter::get_primitive() const{
 	return (*base_images)[from].difference( (*base_images)[to] );
 }
 
-std::vector<int> Converter::path( const QList<Converter>& converters, int from, int to ){
+std::vector<int> Converter::path( const std::vector<Converter>& converters, int from, int to ){
 	std::vector<int> conv_path;
 	conv_path.push_back( from );
 	

@@ -97,7 +97,10 @@ static int parse_int( QString input, int default_value=0 ){
 }
 
 static int optimizeImage( MultiImage& img, QString output_path ){
-	img.optimize( output_path );
+	if( !img.optimize( output_path ) ){
+		cout << "Failed to create CGCompress file\n";
+		return -1;
+	}
 	if( !img.validate( output_path + ".cgcompress" ) ){
 		//Issue with file, don't convert
 		cout << "Resulting file did not pass validity check!\n";
@@ -184,11 +187,15 @@ int main( int argc, char* argv[] ){
 		}
 	}
 	else if( options.contains( "--combined" ) ){
+		if( name_extension.isNull() )
+			name_extension = ".combined";
 		MultiImage multi_img( format );
+		std::vector<RgbaImage> images;
 		for( auto file : files )
 			for( auto& image : extract_files( file ) ){
 				apply_transformations( image.second );
-				multi_img.append( Image( image.second ) );
+				images.push_back( std::move(image.second) );
+				multi_img.append( Image( images.back() ) );
 			}
 		
 		optimizeImage( multi_img, QFileInfo(files[0]).completeBaseName() + name_extension );

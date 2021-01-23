@@ -40,11 +40,11 @@
  *  \param [in,out] used_converters The converters found will be added to this
  *  \param [in] converters The available converters which may be used
  */
-void add_converter( QList<Converter>& used_converters, const QList<Converter>& converters ){
+void add_converter( std::vector<Converter>& used_converters, const std::vector<Converter>& converters ){
 	//Find out which have already been found
 	QList<int> has;
 	for( auto converter : used_converters )
-		has << converter.get_to();
+		has.push_back( converter.get_to() );
 	
 	//Find the best converter, from a found frame, to a not found frame
 	const Converter* best_converter = nullptr;
@@ -60,7 +60,7 @@ void add_converter( QList<Converter>& used_converters, const QList<Converter>& c
 	//Add the best converter
 	if( !best_converter )
 		qFatal( "No converter could be found!" );
-	used_converters << *best_converter;
+	used_converters.push_back( *best_converter );
 }
 
 struct ConverterPara{
@@ -186,10 +186,10 @@ bool MultiImage::optimize( QString name ) const{
 		}
 	QElapsedTimer t;
 	t.start();
-	/*/
-	QList<Converter> converters;
+	//*/
+	std::vector<Converter> converters;
 	for( int i=0; i<converter_para.count(); i++ )
-		converters << createConverter( converter_para[i] );
+		converters.push_back( createConverter( converter_para[i] ) );
 	/*/
 	auto future1 = QtConcurrent::mapped( converter_para, createConverter );
 	ProgressBar::showFuture( "Generating data", future1 );
@@ -215,16 +215,16 @@ bool MultiImage::optimize( QString name ) const{
 	int test_amount = (format.get_precision() == 0) ? originals.size() : 1;
 	{	ProgressBar progress( "Finding efficient solution", test_amount );
 		for( int best_start=0; best_start<test_amount; best_start++, progress.update() ){
-			QList<Converter> used_converters;
-			used_converters << Converter( originals, best_start, best_start, format );
+			std::vector<Converter> used_converters;
+			used_converters.push_back( Converter( originals, best_start, best_start, format ) );
 			
 			for( int i=1; i<originals.size(); i++ )
 				add_converter( used_converters, converters );
 			
-			qSort( used_converters.begin(), used_converters.end(), Converter::less_to );
+			std::sort( used_converters.begin(), used_converters.end(), Converter::less_to );
 			std::vector<Image> primitives;
 			for( auto used : used_converters )
-				primitives.push_back( used.get_primitive() );
+				primitives.push_back( used.get_primitive().auto_crop() );
 			
 			//Evaluate file size and overwrite old solution if better
 			int filesize = 0;
@@ -232,22 +232,23 @@ bool MultiImage::optimize( QString name ) const{
 				for( auto& primitive : primitives )
 					filesize += primitive.compressed_size( format, Format::MEDIUM );
 			if( filesize < best_size ){
-				std::vector<Frame> frames;
+				final_frames.clear();
 				for( int i=0; i<originals.size(); i++ )
-					frames.emplace_back( primitives, Converter::path( used_converters, i, best_start ) );
+					final_frames.emplace_back( primitives, Converter::path( used_converters, i, best_start ) );
 			
 				best_size = filesize;
 				final_primitives = std::move(primitives);
-				final_frames = frames;
 			}
 		}
 	}
 	
-	qDebug( "\nRevaluating differences (%lu+)", final_primitives.size() );
-	reuse_planes2( final_primitives, final_frames, format );
+	qDebug( "\nRevaluating differences (%llu+)", final_primitives.size() );
+	//reuse_planes2( final_primitives, final_frames, format );
 	
-	auto future2 = QtConcurrent::map( final_primitives, [&]( auto& img ){ img = img.optimize_filesize( format ); } );
-	ProgressBar::showFuture( "Optimizing final images", future2 );
+	for (auto&img : final_primitives)
+		img = img.optimize_filesize( format );
+	//auto future2 = QtConcurrent::map( final_primitives, [&]( auto& img ){ img = img.optimize_filesize( format ); } );
+	//ProgressBar::showFuture( "Optimizing final images", future2 );
 	
 	//TODO: Known not to work on transparent images
 	//for( auto& frame : final_frames )
@@ -267,7 +268,7 @@ bool MultiImage::optimize2( QString name ) const{
 	if( originals.count() <= 0 )
 		return true;
 	
-	QList<Converter> converters;
+	std::vector<Converter> converters;
 	ImageSimilarities similarities;
 	{	ProgressBar progress( "Finding similarities", originals.size() );
 		for( int i=0; i<originals.size(); i++ ){
